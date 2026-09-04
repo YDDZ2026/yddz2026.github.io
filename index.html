@@ -254,7 +254,8 @@ const GITHUB_CONFIG = {
 };
 const GITHUB_API = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.dataFile}`;
 const GITHUB_RAW = `https://raw.githubusercontent.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.dataFile}`;
-const githubEnabled = GITHUB_CONFIG.token.length > 20 && GITHUB_CONFIG.token !== '__GITHUB_TOKEN__';
+// 读取公开仓库不需要 Token，只有写入才需要
+const GITHUB_READ_ENABLED = true; // 公开仓库 raw URL 始终可读
 let pollTimer = null;
 let lastDataSHA = '';
 
@@ -334,7 +335,7 @@ function setSyncStatus(status) {
 
 // ========== GitHub Backend: Load ==========
 async function loadFromGitHub() {
-  if (!githubEnabled) { setSyncStatus('offline'); return; }
+  if (!GITHUB_READ_ENABLED) { setSyncStatus('offline'); return; }
   try {
     // Fetch data.json from GitHub raw URL (no auth needed for public repos)
     const resp = await fetch(GITHUB_RAW + '?t=' + Date.now());
@@ -367,7 +368,10 @@ async function loadFromGitHub() {
 
 // ========== GitHub Backend: Save ==========
 async function saveToGitHub(updater) {
-  if (!githubEnabled) return;
+  if (!GITHUB_CONFIG.token || GITHUB_CONFIG.token.length < 20) {
+    setSyncStatus('offline');
+    return;
+  }
   try {
     // Step 1: Get current file SHA (needed for update)
     const resp = await fetch(GITHUB_API + '?ref=' + GITHUB_CONFIG.branch, {
@@ -422,7 +426,7 @@ async function saveToGitHub(updater) {
 
 // ========== GitHub Backend: Poll for Changes ==========
 function startPolling() {
-  if (!githubEnabled) return;
+  if (!GITHUB_READ_ENABLED) return;
   // Poll every 5 seconds for changes
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(loadFromGitHub, 5000);
