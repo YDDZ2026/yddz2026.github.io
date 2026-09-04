@@ -4,9 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>宜都华晟达洲比亚迪客户分布</title>
-<link rel="preconnect" href="https://cdn.jsdelivr.net">
-<link rel="preconnect" href="https://yddz2026.github.io">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="dns-prefetch" href="https://api.github.com">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" as="script" crossorigin>
+<link rel="preload" href="https://cdn.jsdelivr.net/gh/yddz2026/yddz2026.github.io@main/app.js" as="script" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/gh/yddz2026/yddz2026.github.io@main/app.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
@@ -190,6 +193,18 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
   <div style="color:#6b7280;font-size:14px;">正在加载客户分布系统...</div>
   <div id="loadProgress" style="color:#3b82f6;font-size:12px;margin-top:4px;">加载资源中...</div>
 </div>
+<script>
+// Loading timeout check - show retry if scripts don't load in 20s
+setTimeout(function(){
+  if(window.EMBEDDED_DATA){
+    var el=document.getElementById('appLoading');
+    if(el){el.style.opacity='0';setTimeout(function(){el.remove()},300)}
+  }else{
+    var p=document.getElementById('loadProgress');
+    if(p){p.innerHTML='加载超时，<a href="#" onclick="location.reload()" style="color:#3b82f6">点击重试</a>';p.style.fontSize='14px'}
+  }
+},20000);
+</script>
 <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
 <!-- Navigation Bar -->
@@ -371,7 +386,5 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
 </div>
 
 <div class="toast" id="toast"></div>
-
-<script defer src="https://cdn.jsdelivr.net/gh/yddz2026/yddz2026.github.io@main/app.js"></script>
 </body>
 </html>
