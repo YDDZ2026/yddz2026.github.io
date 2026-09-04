@@ -12,6 +12,9 @@ const GITHUB_API = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB
 const GITHUB_RAW = `https://raw.githubusercontent.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.dataFile}`;
 const GITHUB_READ_ENABLED = true;
 let pollTimer = null;
+let autoCycleTimer = null;
+let autoCycleIndex = 0;
+let mapRotateTimer = null;
 let lastDataSHA = '';
 
 // ========== App State ==========
@@ -467,6 +470,125 @@ function onMonthChange() {
 }
 
 // ========== TV View ==========
+// ========== Animation Functions ==========
+function animateNumber(el, targetVal, duration, formatter) {
+  const startVal = 0;
+  const startTime = performance.now();
+  function step(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+    const current = Math.round(startVal + (targetVal - startVal) * eased);
+    el.textContent = formatter ? formatter(current) : current.toLocaleString();
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function renderTVStatsAnimated(grandTotal, grandVIP) {
+  const vipRate = grandTotal > 0 ? (grandVIP / grandTotal * 100).toFixed(1) : '0.0';
+  document.getElementById('tvStats').innerHTML = `
+    <div class="tv-stat-card"><div class="label">客户总数</div><div class="value accent" id="statTotal">0</div></div>
+    <div class="tv-stat-card"><div class="label">VIP客户</div><div class="value success" id="statVIP">0</div></div>
+    <div class="tv-stat-card"><div class="label">VIP占比</div><div class="value warn" id="statRate">0.0%</div></div>
+  `;
+  animateNumber(document.getElementById('statTotal'), grandTotal, 1200);
+  animateNumber(document.getElementById('statVIP'), grandVIP, 1500);
+  // Animate rate
+  const rateEl = document.getElementById('statRate');
+  const rateStart = performance.now();
+  function rateStep(now) {
+    const p = Math.min((now - rateStart) / 1500, 1);
+    const eased = 1 - Math.pow(1 - p, 3);
+    rateEl.textContent = (parseFloat(vipRate) * eased).toFixed(1) + '%';
+    if (p < 1) requestAnimationFrame(rateStep);
+  }
+  requestAnimationFrame(rateStep);
+}
+
+function updateTicker() {
+  const dd = getRangeDistrictData();
+  const names = data.districtNames || [];
+  const districts = names.map(name => ({ name, total: (dd[name]||{}).total||0, vip: (dd[name]||{}).vip||0 }))
+    .sort((a,b) => b.total - a.total);
+  const otherData = dd['其他'] || {total:0, vip:0};
+  const grandTotal = districts.reduce((s,d) => s+d.total, 0) + otherData.total;
+  const grandVIP = districts.reduce((s,d) => s+d.vip, 0) + otherData.vip;
+
+  let parts = [];
+  parts.push(`当前统计：<span>${getRangeLabel()}</span>`);
+  parts.push(`客户总数：<span>${grandTotal.toLocaleString()}</span> 户`);
+  parts.push(`VIP客户：<span>${grandVIP.toLocaleString()}</span> 户`);
+  parts.push(`VIP占比：<span>${grandTotal>0?(grandVIP/grandTotal*100).toFixed(1):'0.0'}%</span>`);
+  // Top 3 districts
+  districts.slice(0, 3).forEach(d => {
+    if (d.total > 0) parts.push(`${d.name}：<span>${d.total}</span> 户`);
+  });
+  if (otherData.total > 0) parts.push(`市外客户：<span>${otherData.total}</span> 户`);
+  parts.push(`系统开发：宜都华晟达洲比亚迪 · 技术支持：Trae AI`);
+
+  document.getElementById('tvTickerText').innerHTML = parts.join(' &nbsp;|&nbsp; ');
+}
+
+function startAutoCycle() {
+  if (autoCycleTimer) clearInterval(autoCycleTimer);
+  if (currentView !== 'tv') return;
+
+  const badge = document.getElementById('autoCycleBadge');
+  if (badge) badge.classList.add('active');
+
+  autoCycleIndex = 0;
+  autoCycleTimer = setInterval(() => {
+    if (currentView !== 'tv') { stopAutoCycle(); return; }
+    const names = data.districtNames || [];
+    if (names.length === 0) return;
+
+    // Cycle: overview -> district1 -> district2 -> ... -> overview
+    if (autoCycleIndex === 0) {
+      // Show overview
+      currentDrillDistrict = null;
+      document.getElementById('tvBackBtn').style.display = 'none';
+      document.getElementById('tvMapTitle').textContent = '客户分布 - ' + getRangeLabel();
+      renderTVOverview();
+      renderTVRankList();
+      updateTicker();
+    } else {
+      const idx = autoCycleIndex - 1;
+      if (idx < names.length) {
+        drillToDistrict(names[idx]);
+        updateTicker();
+      }
+    }
+    autoCycleIndex++;
+    if (autoCycleIndex > names.length) autoCycleIndex = 0;
+  }, 6000); // 6 seconds per view
+}
+
+function stopAutoCycle() {
+  if (autoCycleTimer) { clearInterval(autoCycleTimer); autoCycleTimer = null; }
+  const badge = document.getElementById('autoCycleBadge');
+  if (badge) badge.classList.remove('active');
+}
+
+function startMapRotation() {
+  if (mapRotateTimer) clearInterval(mapRotateTimer);
+  let angle = 0;
+  mapRotateTimer = setInterval(() => {
+    if (currentView !== 'tv' || !tvChart || currentDrillDistrict) return;
+    angle += 0.3;
+    if (angle > 5) angle = -5;
+    // Subtle zoom oscillation instead of rotation (ECharts map doesn't support rotation)
+    const zoom = 1.2 + Math.sin(Date.now() / 5000) * 0.05;
+    try {
+      tvChart.setOption({ series: [{ zoom: zoom }] });
+    } catch(e) {}
+  }, 2000);
+}
+
+function stopMapRotation() {
+  if (mapRotateTimer) { clearInterval(mapRotateTimer); mapRotateTimer = null; }
+}
+
 function initTV() {
   if (!tvChart) {
     tvChart = echarts.init(document.getElementById('tvMap'));
@@ -475,6 +597,9 @@ function initTV() {
   echarts.registerMap('yichang', data.districtGeo);
   renderTVOverview();
   renderTVRankList();
+  // Start exhibition animations
+  startAutoCycle();
+  startMapRotation();
 }
 
 function renderTVOverview() {
@@ -485,12 +610,9 @@ function renderTVOverview() {
   const grandTotal = districts.reduce((s,d) => s+d.value, 0) + otherData.total;
   const grandVIP = districts.reduce((s,d) => s+d.vip, 0) + otherData.vip;
 
-  document.getElementById('tvMapTitle').textContent = '宜昌市客户分布 - ' + getRangeLabel();
-  document.getElementById('tvStats').innerHTML = `
-    <div class="tv-stat-card"><div class="label">客户总数</div><div class="value accent">${grandTotal.toLocaleString()}</div></div>
-    <div class="tv-stat-card"><div class="label">VIP客户</div><div class="value success">${grandVIP.toLocaleString()}</div></div>
-    <div class="tv-stat-card"><div class="label">VIP占比</div><div class="value warn">${grandTotal>0?(grandVIP/grandTotal*100).toFixed(1):'0.0'}%</div></div>
-  `;
+  document.getElementById('tvMapTitle').textContent = '客户分布 - ' + getRangeLabel();
+  renderTVStatsAnimated(grandTotal, grandVIP);
+  updateTicker();
 
   const maxVal = Math.max(...districts.map(d=>d.value), 1);
   const seriesData = districts.map(d => ({
@@ -500,6 +622,11 @@ function renderTVOverview() {
   }));
 
   tvChart.setOption({
+    geo: {
+      map: 'yichang', roam: true, zoom: 1.2, silent: true,
+      itemStyle: { areaColor: 'transparent', borderColor: 'transparent' },
+      label: { show: false }
+    },
     tooltip: {
       trigger: 'item', backgroundColor: 'rgba(10,14,26,0.95)', borderColor: '#1e3a5f', textStyle: { color: '#e0e7ff', fontSize: 13 },
       formatter: function(p) {
@@ -514,13 +641,28 @@ function renderTVOverview() {
       labelLayout: { hideOverlap: false },
       itemStyle: { borderColor: '#2a4a7f', borderWidth: 1 },
       emphasis: { label: { show: true, formatter: '{b}', color: '#fff', fontSize: 14, fontWeight: 'bold', textBorderColor: '#1e3a5f', textBorderWidth: 2 }, itemStyle: { areaColor: '#3b82f6' } },
-      data: seriesData
+      data: seriesData,
+      // Auto highlight effect - cycle through districts
+      animation: true, animationDuration: 800, animationDurationUpdate: 500, animationEasing: 'cubicOut'
+    }, {
+      // Effect scatter for pulsing dots on districts with data
+      type: 'effectScatter',
+      coordinateSystem: 'geo',
+      rippleEffect: { brushType: 'stroke', scale: 3, period: 4 },
+      symbolSize: function(val) { return Math.max(Math.sqrt(val[2]) * 2, 6); },
+      itemStyle: { color: '#3b82f6', shadowBlur: 10, shadowColor: 'rgba(59,130,246,0.5)' },
+      data: [],
+      zlevel: 2
     }]
   }, true);
 
   tvChart.off('click');
   tvChart.on('click', function(params) {
-    if (params.name) drillToDistrict(params.name);
+    if (params.name) {
+      stopAutoCycle();
+      stopMapRotation();
+      drillToDistrict(params.name);
+    }
   });
 }
 
@@ -571,10 +713,12 @@ function drillToDistrict(districtName) {
 
 function backToOverview() {
   currentDrillDistrict = null;
-  document.getElementById('tvMapTitle').textContent = '宜昌市客户分布 - ' + getRangeLabel();
+  document.getElementById('tvMapTitle').textContent = '客户分布 - ' + getRangeLabel();
   document.getElementById('tvBackBtn').style.display = 'none';
   renderTVOverview();
   renderTVRankList();
+  // Resume auto cycle after manual back
+  setTimeout(() => { startAutoCycle(); startMapRotation(); }, 2000);
 }
 
 function renderTVRankList() {
@@ -973,6 +1117,8 @@ function resetData() {
 
 // ========== View Routing ==========
 function switchView(view) {
+  // Stop animations when leaving TV view
+  if (currentView === 'tv' && view !== 'tv') { stopAutoCycle(); stopMapRotation(); }
   currentView = view;
   detectedDevice = detectDevice();
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));

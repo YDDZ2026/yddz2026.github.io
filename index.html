@@ -185,6 +185,141 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
   .nav-logo { font-size: 13px; }
   .tv-title { font-size: 20px; }
 }
+
+/* ========== Animation Effects for Exhibition ========== */
+@keyframes particleFloat {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.4; }
+  100% { transform: translateY(-100vh) translateX(30px); opacity: 0; }
+}
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 5px rgba(59,130,246,0.3), 0 0 10px rgba(59,130,246,0.1); }
+  50% { box-shadow: 0 0 20px rgba(59,130,246,0.6), 0 0 40px rgba(59,130,246,0.2); }
+}
+@keyframes borderFlow {
+  0% { border-image-source: linear-gradient(0deg, #3b82f6, #1e3a5f); }
+  50% { border-image-source: linear-gradient(180deg, #3b82f6, #1e3a5f); }
+  100% { border-image-source: linear-gradient(360deg, #3b82f6, #1e3a5f); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes statCardEnter {
+  0% { transform: scale(0.8) translateY(10px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+@keyframes rankBarSlide {
+  0% { transform: translateX(-20px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+@keyframes titleGlow {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(59,130,246,0.3)); }
+  50% { filter: drop-shadow(0 0 8px rgba(59,130,246,0.6)); }
+}
+@keyframes tickerScroll {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+@keyframes scanLine {
+  0% { top: 0; opacity: 0.8; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* Particle background */
+.tv-view::before {
+  content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none; z-index: 0;
+  background-image: 
+    radial-gradient(circle at 15% 30%, rgba(59,130,246,0.04) 0%, transparent 40%),
+    radial-gradient(circle at 85% 70%, rgba(139,92,246,0.04) 0%, transparent 40%),
+    radial-gradient(circle at 50% 90%, rgba(6,182,212,0.03) 0%, transparent 50%);
+  animation: bgShift 20s ease-in-out infinite;
+}
+@keyframes bgShift {
+  0%, 100% { background-position: 0% 0%, 100% 100%, 50% 100%; }
+  33% { background-position: 30% 20%, 70% 80%, 60% 90%; }
+  66% { background-position: 60% 40%, 40% 60%, 40% 80%; }
+}
+
+/* Animated stat cards */
+.tv-stat-card {
+  animation: statCardEnter 0.5s ease-out backwards, glowPulse 3s ease-in-out infinite;
+}
+.tv-stat-card:nth-child(1) { animation-delay: 0s, 0s; }
+.tv-stat-card:nth-child(2) { animation-delay: 0.15s, 0.5s; }
+.tv-stat-card:nth-child(3) { animation-delay: 0.3s, 1s; }
+
+/* Title glow */
+.tv-title { animation: titleGlow 3s ease-in-out infinite; }
+
+/* Rank bar staggered animation */
+.tv-rank-bar { animation: rankBarSlide 0.4s ease-out backwards; }
+.tv-rank-bar:nth-child(1) { animation-delay: 0.05s; }
+.tv-rank-bar:nth-child(2) { animation-delay: 0.1s; }
+.tv-rank-bar:nth-child(3) { animation-delay: 0.15s; }
+.tv-rank-bar:nth-child(4) { animation-delay: 0.2s; }
+.tv-rank-bar:nth-child(5) { animation-delay: 0.25s; }
+.tv-rank-bar:nth-child(6) { animation-delay: 0.3s; }
+.tv-rank-bar:nth-child(7) { animation-delay: 0.35s; }
+.tv-rank-bar:nth-child(8) { animation-delay: 0.4s; }
+.tv-rank-bar:nth-child(9) { animation-delay: 0.45s; }
+.tv-rank-bar:nth-child(10) { animation-delay: 0.5s; }
+.tv-rank-bar:nth-child(11) { animation-delay: 0.55s; }
+.tv-rank-bar:nth-child(12) { animation-delay: 0.6s; }
+.tv-rank-bar:nth-child(13) { animation-delay: 0.65s; }
+.tv-rank-bar:nth-child(14) { animation-delay: 0.7s; }
+
+/* Shimmer on bar fills */
+.tv-rank-bar .bar-fill {
+  background-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/* Map scan line effect */
+.tv-map-container::after {
+  content: ''; position: absolute; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(59,130,246,0.6), transparent);
+  pointer-events: none; z-index: 5; animation: scanLine 4s linear infinite;
+}
+
+/* Card border glow */
+.tv-panel, .tv-map-container {
+  animation: glowPulse 4s ease-in-out infinite;
+}
+
+/* Data ticker */
+.tv-ticker {
+  position: fixed; bottom: 28px; left: 0; right: 0; height: 28px;
+  background: rgba(10,14,26,0.8); border-top: 1px solid rgba(59,130,246,0.2);
+  overflow: hidden; z-index: 50; display: flex; align-items: center;
+}
+.tv-ticker-label {
+  flex-shrink: 0; padding: 0 12px; font-size: 11px; font-weight: 700;
+  color: #3b82f6; border-right: 1px solid rgba(59,130,246,0.2); height: 100%;
+  display: flex; align-items: center; background: rgba(59,130,246,0.05);
+}
+.tv-ticker-content {
+  flex: 1; overflow: hidden; white-space: nowrap;
+}
+.tv-ticker-text {
+  display: inline-block; padding-left: 100%;
+  font-size: 12px; color: #9ca3af;
+  animation: tickerScroll 40s linear infinite;
+}
+.tv-ticker-text span { color: #3b82f6; font-weight: 600; margin: 0 4px; }
+
+/* Auto-cycle indicator */
+.auto-cycle-badge {
+  position: absolute; top: 16px; right: 60px; z-index: 10;
+  padding: 4px 10px; background: rgba(239,68,68,0.15);
+  border: 1px solid #ef4444; border-radius: 8px; color: #ef4444;
+  font-size: 11px; font-weight: 600; animation: glowPulse 2s ease-in-out infinite;
+  display: none;
+}
+.auto-cycle-badge.active { display: block; }
 </style>
 </head>
 <body>
@@ -258,11 +393,17 @@ setTimeout(function(){
       </div>
       <div class="tv-map" id="tvMap"></div>
       <button class="fullscreen-btn" id="fullscreenBtn">全屏</button>
+      <div class="auto-cycle-badge" id="autoCycleBadge">自动巡播中</div>
     </div>
     <div class="tv-panel" id="tvPanel">
       <div class="tv-panel-title">各区县客户排名</div>
       <div id="tvRankList"></div>
     </div>
+  </div>
+  <!-- Data Ticker -->
+  <div class="tv-ticker" id="tvTicker">
+    <div class="tv-ticker-label">实时数据</div>
+    <div class="tv-ticker-content"><div class="tv-ticker-text" id="tvTickerText"></div></div>
   </div>
 </div>
 
