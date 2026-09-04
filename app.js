@@ -811,7 +811,8 @@ function renderMobileRankList() {
     const barW = (d.total/maxTotal*100).toFixed(1);
     const vipPct = d.total>0?(d.vip/d.total*100).toFixed(1):'0.0';
     const label = d.isOther ? `${i+1}. 其他 (市外)` : `${i+1}. ${d.name}`;
-    return `<div class="mobile-street-row" style="padding:10px 0;"><div style="flex:1;">
+    const clickAttr = d.isOther ? '' : `onclick="showMobileDetail('${d.name}')" style="cursor:pointer"`;
+    return `<div class="mobile-street-row" ${clickAttr} style="padding:10px 0;${d.isOther?'':'transition:background 0.15s;'}" ${d.isOther?'':'onmouseover="this.style.background=\'#eff6ff\'" onmouseout="this.style.background=\'transparent\'"'}><div style="flex:1;">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <span class="name" style="font-weight:${d.isOther?'bold':'600'};color:${d.isOther?'#6b7280':'inherit'};">${label}</span>
         <span class="val" style="font-size:12px;">${d.total}户 · VIP ${d.vip} (${vipPct}%)</span>
@@ -861,13 +862,35 @@ function showMobileDetail(districtName) {
   const rate = dInfo.total>0?(dInfo.vip/dInfo.total*100).toFixed(1):'0.0';
 
   document.getElementById('mobilePanelTitle').textContent = districtName + ' - 街道详情 - ' + getRangeLabel();
+  
+  // Collect customer records
+  const customers = getRangeCustomerList(districtName);
+  let customerHtml = '';
+  customers.forEach(c => {
+    const vipBadge = c.vip === 1 ? '<span style="font-size:10px;color:#10b981;font-weight:700;border:1px solid rgba(16,185,129,0.3);border-radius:4px;padding:1px 6px;">VIP</span>' : '';
+    const monthLabel = c.month ? c.month.replace('-', '年') + '月' : '';
+    customerHtml += `<div class="mobile-street-row"><div style="flex:1;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="name" style="font-weight:600;">${c.name || '未署名'}</span>
+        ${vipBadge}
+      </div>
+      <div style="font-size:11px;color:var(--mobile-dim);margin-top:2px;">${c.street || ''} ${c.detail || ''}</div>
+      <div style="font-size:10px;color:#9ca3af;margin-top:1px;">${monthLabel}</div>
+    </div></div>`;
+  });
+
   document.getElementById('mobileRankList').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
       <div class="mobile-detail-stat" style="background:var(--mobile-bg);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:10px;color:var(--mobile-dim);">客户总数</div><div style="font-size:16px;font-weight:700;color:#3b82f6">${dInfo.total}</div></div>
       <div class="mobile-detail-stat" style="background:var(--mobile-bg);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:10px;color:var(--mobile-dim);">VIP客户</div><div style="font-size:16px;font-weight:700;color:#10b981">${dInfo.vip}</div></div>
     </div>
+    <div style="font-size:13px;font-weight:600;margin:12px 0 8px;color:var(--mobile-text);">街道客户分布</div>
     <div class="mobile-street-list">
       ${streetList.length > 0 ? streetList.map(s => `<div class="mobile-street-row"><span class="name">${s.name}</span><span class="val">${s.total}户 (VIP ${s.vip})</span></div>`).join('') : '<div style="color:#9ca3af;font-size:13px;text-align:center;padding:16px;">暂无街道数据</div>'}
+    </div>
+    <div style="font-size:13px;font-weight:600;margin:16px 0 8px;color:var(--mobile-text);">客户明细 (${customers.length} 户)</div>
+    <div class="mobile-street-list" style="max-height:400px;overflow-y:auto;">
+      ${customerHtml || '<div style="color:#9ca3af;font-size:13px;text-align:center;padding:16px;">暂无客户记录</div>'}
     </div>
   `;
 }
