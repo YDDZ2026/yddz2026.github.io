@@ -1,7 +1,7 @@
 {
   "district_data": {
     "西陵区": {
-      "total": 1290,
+      "total": 1280,
       "vip": 186
     },
     "伍家岗区": {
@@ -537,6 +537,6 @@
       }
     }
   },
-  "updated_by": "API测试",
+  "updated_by": "系统初始化",
   "updated_at": "2026-09-04T03:10:00.000Z"
 }
