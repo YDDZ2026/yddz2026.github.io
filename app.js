@@ -530,12 +530,38 @@ function updateTicker() {
   document.getElementById('tvTickerText').innerHTML = parts.join(' &nbsp;|&nbsp; ');
 }
 
+function updateCycleToggleUI(isAuto) {
+  var autoBtn = document.getElementById('autoCycleBtn');
+  var manualBtn = document.getElementById('manualBtn');
+  var toggle = document.getElementById('cycleToggle');
+  if (!autoBtn || !manualBtn || !toggle) return;
+  if (isAuto) {
+    autoBtn.classList.add('active');
+    autoBtn.classList.remove('manual');
+    manualBtn.classList.remove('active');
+    toggle.style.borderColor = '#ef4444';
+  } else {
+    manualBtn.classList.add('active', 'manual');
+    autoBtn.classList.remove('active');
+    toggle.style.borderColor = '#3b82f6';
+  }
+}
+
+function toggleAutoCycle(autoOn) {
+  if (autoOn) {
+    startAutoCycle();
+    startMapRotation();
+  } else {
+    stopAutoCycle();
+    stopMapRotation();
+  }
+}
+
 function startAutoCycle() {
   if (autoCycleTimer) clearInterval(autoCycleTimer);
   if (currentView !== 'tv') return;
 
-  const badge = document.getElementById('autoCycleBadge');
-  if (badge) badge.classList.add('active');
+  updateCycleToggleUI(true);
 
   autoCycleIndex = 0;
   autoCycleTimer = setInterval(() => {
@@ -566,8 +592,7 @@ function startAutoCycle() {
 
 function stopAutoCycle() {
   if (autoCycleTimer) { clearInterval(autoCycleTimer); autoCycleTimer = null; }
-  const badge = document.getElementById('autoCycleBadge');
-  if (badge) badge.classList.remove('active');
+  updateCycleToggleUI(false);
 }
 
 function startMapRotation() {
