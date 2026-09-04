@@ -107,12 +107,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
 .tv-detail-stat { background: rgba(59,130,246,0.05); border-radius: 8px; padding: 10px; text-align: center; }
 .tv-detail-stat .label { font-size: 11px; color: var(--tv-dim); }
 .tv-detail-stat .value { font-size: 20px; font-weight: 700; margin-top: 4px; }
-.tv-rank-bar { margin-bottom: 6px; }
+.tv-rank-bar { margin-bottom: 6px; border-radius: 6px; padding: 2px 4px; transition: background 0.2s; }
 .tv-rank-bar .row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .tv-rank-bar .name { width: 100px; font-size: 12px; color: var(--tv-dim); text-align: right; }
 .tv-rank-bar .bar-bg { flex: 1; height: 18px; background: rgba(59,130,246,0.1); border-radius: 4px; overflow: hidden; }
 .tv-rank-bar .bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
 .tv-rank-bar .val { width: 50px; font-size: 12px; color: var(--tv-text); font-variant-numeric: tabular-nums; }
+.tv-rank-bar.clickable:hover { background: rgba(59,130,246,0.12); }
+.tv-rank-bar.clickable:hover .name { color: var(--tv-accent); }
+.tv-rank-bar.clickable:hover .bar-bg { background: rgba(59,130,246,0.2); }
 .fullscreen-btn { position: absolute; top: 16px; right: 16px; z-index: 10; padding: 6px 12px; background: rgba(59,130,246,0.15); border: 1px solid var(--tv-accent); border-radius: 8px; color: var(--tv-accent); cursor: pointer; font-size: 12px; }
 .fullscreen-btn:hover { background: rgba(59,130,246,0.3); }
 :fullscreen .nav-bar { display: none; }
