@@ -33,7 +33,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
 
 /* ========== Month Picker ========== */
 .month-picker-bar { display: flex; align-items: center; gap: 8px; }
-.month-picker-bar label { font-size: 13px; color: var(--tv-dim); white-space: nowrap; }
+.picker-mode-toggle { display: flex; border: 1px solid var(--tv-border); border-radius: 8px; overflow: hidden; }
+.mode-btn { padding: 6px 14px; border: none; background: transparent; color: var(--tv-dim); font-size: 13px; cursor: pointer; transition: all 0.2s; }
+.mode-btn.active { background: var(--tv-accent); color: #fff; font-weight: 600; }
+.mode-btn:hover:not(.active) { color: var(--tv-text); background: rgba(59,130,246,0.1); }
+.cal-icon { font-size: 14px; }
+.view-btn { padding: 8px 20px; border-radius: 8px; border: 1px solid var(--tv-border); background: rgba(59,130,246,0.1); color: var(--tv-text); font-size: 13px; cursor: pointer; transition: all 0.2s; font-weight: 500; }
+.view-btn:hover { background: var(--tv-accent); color: #fff; border-color: var(--tv-accent); }
+.mobile-view-btn { padding: 10px 16px; background: var(--mobile-accent); color: #fff; border: none; font-size: 14px; border-radius: 10px; }
 .month-picker-trigger { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--tv-border); background: var(--tv-card); color: var(--tv-text); font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; min-width: 140px; justify-content: center; transition: all 0.2s; }
 .month-picker-trigger:hover { border-color: var(--tv-accent); background: rgba(59,130,246,0.1); }
 .month-picker-trigger .arrow { font-size: 10px; color: var(--tv-dim); }
@@ -193,14 +200,18 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
     <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
       <div class="tv-title">宜都华晟达洲比亚迪 · 宜昌客户分布</div>
       <div class="month-picker-bar">
-        <label>查询月份：</label>
+        <div class="picker-mode-toggle">
+          <button class="mode-btn active" data-mode="month" onclick="setPickerMode('tv','month')">按月</button>
+          <button class="mode-btn" data-mode="year" onclick="setPickerMode('tv','year')">按年</button>
+        </div>
         <div class="month-picker-wrapper">
           <button class="month-picker-trigger" id="tvMonthTrigger" onclick="toggleMonthPicker('tv')">
+            <span class="cal-icon">📅</span>
             <span id="tvMonthLabel">累计</span>
             <span class="arrow">▼</span>
           </button>
           <div class="month-picker-dropdown" id="tvMonthDropdown">
-            <div class="month-picker-year-header">
+            <div class="month-picker-year-header" id="tvPickerHeader">
               <span class="nav-arrow" onclick="changePickerYear('tv', -1)">«</span>
               <span class="year-label" id="tvPickerYear">2026 年</span>
               <span class="nav-arrow" onclick="changePickerYear('tv', 1)">»</span>
@@ -211,6 +222,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
             </div>
           </div>
         </div>
+        <button class="view-btn" onclick="refreshCurrentView()">查看</button>
       </div>
     </div>
     <div class="tv-stats" id="tvStats"></div>
@@ -238,12 +250,20 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
     <div class="mobile-subtitle" id="mobileSubtitle">点击地图区域查看详情</div>
   </div>
   <div class="mobile-month-picker">
-    <button class="mobile-month-trigger" onclick="toggleMonthPicker('mobile')">
-      <span id="mobileMonthLabel">累计</span>
-      <span style="font-size:10px;color:var(--mobile-dim);">▼</span>
-    </button>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="picker-mode-toggle">
+        <button class="mode-btn active" data-mode="month" onclick="setPickerMode('mobile','month')">按月</button>
+        <button class="mode-btn" data-mode="year" onclick="setPickerMode('mobile','year')">按年</button>
+      </div>
+      <button class="mobile-month-trigger" style="flex:1;" onclick="toggleMonthPicker('mobile')">
+        <span style="font-size:14px;">📅</span>
+        <span id="mobileMonthLabel">累计</span>
+        <span style="font-size:10px;color:var(--mobile-dim);">▼</span>
+      </button>
+      <button class="view-btn mobile-view-btn" onclick="refreshCurrentView()">查看</button>
+    </div>
     <div class="mobile-month-dropdown" id="mobileMonthDropdown">
-      <div class="month-picker-year-header">
+      <div class="month-picker-year-header" id="mobilePickerHeader">
         <span class="nav-arrow" onclick="changePickerYear('mobile', -1)">«</span>
         <span class="year-label" id="mobilePickerYear">2026 年</span>
         <span class="nav-arrow" onclick="changePickerYear('mobile', 1)">»</span>
@@ -370,6 +390,8 @@ let isAdmin = false;
 let detectedDevice = 'desktop';
 let currentMonth = 'all';
 let pickerYear = 2026;
+let pickerMode = 'month'; // 'month' or 'year'
+let yearPageStart = 2024; // for year mode pagination (shows 12 years at a time)
 
 const STORAGE_KEY = 'yidu_byd_full_data';
 const UPDATE_KEY = 'yidu_byd_update';
@@ -506,10 +528,25 @@ function toggleMonthPicker(which) {
   }
 }
 
+function setPickerMode(which, mode) {
+  pickerMode = mode;
+  // Update toggle buttons
+  const wrapper = which === 'tv' ? document.getElementById('tvMonthDropdown') : document.getElementById('mobileMonthDropdown');
+  // Update all mode-btn groups
+  document.querySelectorAll('.picker-mode-toggle').forEach(toggle => {
+    toggle.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+  });
+  renderPickerGrid(which);
+}
+
 function changePickerYear(which, delta) {
-  pickerYear += delta;
-  const yearLabel = document.getElementById(which + 'PickerYear');
-  if (yearLabel) yearLabel.textContent = pickerYear + ' 年';
+  if (pickerMode === 'year') {
+    yearPageStart += delta * 12;
+  } else {
+    pickerYear += delta;
+  }
   renderPickerGrid(which);
 }
 
@@ -517,27 +554,58 @@ function renderPickerGrid(which) {
   const grid = document.getElementById(which + 'PickerGrid');
   if (!grid) return;
   const yearLabel = document.getElementById(which + 'PickerYear');
-  if (yearLabel) yearLabel.textContent = pickerYear + ' 年';
-  
   const available = getAvailableMonths();
-  const minMonth = available[0]; // e.g. '2026-08'
-  const minYear = parseInt(minMonth.split('-')[0]);
-  const minMon = parseInt(minMonth.split('-')[1]);
   
-  let html = '';
-  for (let m = 1; m <= 12; m++) {
-    const monthKey = pickerYear + '-' + String(m).padStart(2, '0');
-    const isAvailable = available.indexOf(monthKey) >= 0;
-    const isActive = currentMonth === monthKey;
-    const isDisabled = !isAvailable;
-    
-    let cls = 'month-picker-cell';
-    if (isActive) cls += ' active';
-    if (isDisabled) cls += ' disabled';
-    
-    html += `<div class="${cls}" onclick="${isDisabled ? '' : `selectPickerMonth('${which}', '${monthKey}')`}">${MONTH_NAMES_CN[m-1]}</div>`;
+  if (pickerMode === 'year') {
+    // Year mode: show 12 years in a 4x3 grid
+    if (yearLabel) yearLabel.textContent = yearPageStart + ' - ' + (yearPageStart + 11) + ' 年';
+    let html = '';
+    for (let i = 0; i < 12; i++) {
+      const yr = yearPageStart + i;
+      // Check if any month in this year is available
+      const hasData = available.some(m => m.startsWith(yr + '-'));
+      // Check if this year is the selected year (if currentMonth starts with this year)
+      const isSelected = currentMonth !== 'all' && currentMonth.startsWith(yr + '-');
+      let cls = 'month-picker-cell';
+      if (isSelected) cls += ' active';
+      if (!hasData) cls += ' disabled';
+      html += `<div class="${cls}" onclick="${hasData ? `selectPickerYear('${which}', ${yr})` : ''}">${yr}年</div>`;
+    }
+    grid.innerHTML = html;
+  } else {
+    // Month mode: show 12 months in a 4x3 grid
+    if (yearLabel) yearLabel.textContent = pickerYear + ' 年';
+    let html = '';
+    for (let m = 1; m <= 12; m++) {
+      const monthKey = pickerYear + '-' + String(m).padStart(2, '0');
+      const isAvailable = available.indexOf(monthKey) >= 0;
+      const isActive = currentMonth === monthKey;
+      const isDisabled = !isAvailable;
+      let cls = 'month-picker-cell';
+      if (isActive) cls += ' active';
+      if (isDisabled) cls += ' disabled';
+      html += `<div class="${cls}" onclick="${isDisabled ? '' : `selectPickerMonth('${which}', '${monthKey}')`}">${MONTH_NAMES_CN[m-1]}</div>`;
+    }
+    grid.innerHTML = html;
   }
-  grid.innerHTML = html;
+}
+
+function selectPickerYear(which, year) {
+  // When a year is selected, switch to month mode for that year
+  pickerYear = year;
+  pickerMode = 'month';
+  // Update toggle buttons
+  document.querySelectorAll('.picker-mode-toggle').forEach(toggle => {
+    toggle.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === 'month');
+    });
+  });
+  // Check if this year has any available months
+  const available = getAvailableMonths();
+  const yearMonths = available.filter(m => m.startsWith(year + '-'));
+  if (yearMonths.length === 0) return;
+  // Select the first available month of this year, or show the month grid
+  renderPickerGrid(which);
 }
 
 function selectPickerMonth(which, month) {
