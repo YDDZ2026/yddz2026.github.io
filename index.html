@@ -572,8 +572,9 @@ function renderTVOverview() {
       roam: true,
       zoom: 1.2,
       label: { show: true, color: '#cbd5e1', fontSize: 10 },
+      labelLayout: { hideOverlap: false },
       itemStyle: { borderColor: '#2a4a7f', borderWidth: 1 },
-      emphasis: { label: { color: '#fff', fontWeight: 'bold' }, itemStyle: { areaColor: '#3b82f6' } },
+      emphasis: { label: { show: true, color: '#fff', fontWeight: 'bold' }, itemStyle: { areaColor: '#3b82f6' } },
       data: seriesData
     }]
   }, true);
@@ -642,8 +643,9 @@ function drillToDistrict(districtName) {
       roam: true,
       zoom: 1.2,
       label: { show: true, color: '#cbd5e1', fontSize: 9 },
+      labelLayout: { hideOverlap: false },
       itemStyle: { borderColor: '#2a4a7f', borderWidth: 1 },
-      emphasis: { label: { color: '#fff', fontWeight: 'bold' }, itemStyle: { areaColor: '#3b82f6' } },
+      emphasis: { label: { show: true, color: '#fff', fontWeight: 'bold' }, itemStyle: { areaColor: '#3b82f6' } },
       data: seriesData
     }]
   }, true);
@@ -788,8 +790,9 @@ function initMobile() {
       roam: true,
       zoom: 1.2,
       label: { show: true, color: '#374151', fontSize: 8 },
+      labelLayout: { hideOverlap: false },
       itemStyle: { borderColor: '#cbd5e1', borderWidth: 0.5 },
-      emphasis: { label: { fontWeight: 'bold' }, itemStyle: { areaColor: '#3b82f6' } },
+      emphasis: { label: { show: true, fontWeight: 'bold' }, itemStyle: { areaColor: '#3b82f6' } },
       data: seriesData
     }]
   }, true);
@@ -855,8 +858,9 @@ function showMobileDetail(districtName) {
         roam: true,
         zoom: 1.2,
         label: { show: true, color: '#374151', fontSize: 8 },
+        labelLayout: { hideOverlap: false },
         itemStyle: { borderColor: '#cbd5e1', borderWidth: 0.5 },
-        emphasis: { itemStyle: { areaColor: '#3b82f6' } },
+        emphasis: { label: { show: true, fontWeight: 'bold' }, itemStyle: { areaColor: '#3b82f6' } },
         data: streets.map(s => ({
           name: s.name, value: s.value, vip: s.vip,
           itemStyle: { areaColor: getColorForValue(s.value, maxVal) }
