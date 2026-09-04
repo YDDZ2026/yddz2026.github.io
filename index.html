@@ -386,5 +386,28 @@ setTimeout(function(){
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Developer Info Footer -->
+<div id="devFooter" style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:4px 8px;font-size:11px;color:rgba(107,114,128,0.7);background:rgba(10,14,26,0.6);pointer-events:none;z-index:999;backdrop-filter:blur(4px);">
+  系统开发：宜都华晟达洲比亚迪 · 技术支持：Trae AI · 数据更新：实时同步
+</div>
+<script>
+// Adjust footer color based on view
+(function(){
+  var footer = document.getElementById('devFooter');
+  function updateFooterStyle(){
+    var hash = location.hash.replace('#','') || 'tv';
+    if(hash === 'tv'){
+      footer.style.color = 'rgba(107,114,128,0.6)';
+      footer.style.background = 'rgba(10,14,26,0.6)';
+    } else {
+      footer.style.color = 'rgba(107,114,128,0.6)';
+      footer.style.background = 'rgba(243,244,246,0.8)';
+    }
+  }
+  updateFooterStyle();
+  window.addEventListener('hashchange', updateFooterStyle);
+})();
+</script>
 </body>
 </html>
