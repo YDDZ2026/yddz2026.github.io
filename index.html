@@ -116,6 +116,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
 .tv-rank-bar.clickable:hover { background: rgba(59,130,246,0.12); }
 .tv-rank-bar.clickable:hover .name { color: var(--tv-accent); }
 .tv-rank-bar.clickable:hover .bar-bg { background: rgba(59,130,246,0.2); }
+.tv-cust-list { max-height: 400px; overflow-y: auto; border-radius: 8px; background: rgba(59,130,246,0.03); }
+.tv-cust-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-bottom: 1px solid rgba(59,130,246,0.08); font-size: 12px; transition: background 0.15s; }
+.tv-cust-row:hover { background: rgba(59,130,246,0.08); }
+.tv-cust-row:last-child { border-bottom: none; }
+.tv-cust-name { font-weight: 600; color: var(--tv-text); min-width: 60px; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+.tv-cust-addr { flex: 1; color: var(--tv-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tv-cust-month { font-size: 10px; color: #6b7280; flex-shrink: 0; }
+.tv-cust-vip { font-size: 10px; color: #10b981; font-weight: 700; padding: 1px 6px; border: 1px solid rgba(16,185,129,0.3); border-radius: 4px; flex-shrink: 0; }
+.tv-cust-normal { font-size: 10px; color: #6b7280; padding: 1px 6px; border: 1px solid rgba(107,114,128,0.3); border-radius: 4px; flex-shrink: 0; }
 .fullscreen-btn { position: absolute; top: 16px; right: 16px; z-index: 10; padding: 6px 12px; background: rgba(59,130,246,0.15); border: 1px solid var(--tv-accent); border-radius: 8px; color: var(--tv-accent); cursor: pointer; font-size: 12px; }
 .fullscreen-btn:hover { background: rgba(59,130,246,0.3); }
 :fullscreen .nav-bar { display: none; }
