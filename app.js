@@ -694,6 +694,20 @@ function renderTVDetailPanel(districtName) {
     </div></div>`;
   });
 
+  // Collect customer records for this district
+  const customers = getRangeCustomerList(districtName);
+  let customerHtml = '';
+  customers.forEach((c, i) => {
+    const vipBadge = c.vip === 1 ? '<span class="tv-cust-vip">VIP</span>' : '<span class="tv-cust-normal">普通</span>';
+    const monthLabel = c.month ? c.month.replace('-', '年') + '月' : '';
+    customerHtml += `<div class="tv-cust-row">
+      <span class="tv-cust-name">${c.name || '未署名'}</span>
+      <span class="tv-cust-addr">${c.street || ''} ${c.detail || ''}</span>
+      <span class="tv-cust-month">${monthLabel}</span>
+      ${vipBadge}
+    </div>`;
+  });
+
   document.getElementById('tvPanel').innerHTML = `
     <div class="tv-detail-card">
       <div class="tv-detail-name">${districtName}</div>
@@ -707,8 +721,32 @@ function renderTVDetailPanel(districtName) {
         <div style="font-size:14px;font-weight:600;margin-bottom:8px;color:#e0e7ff">街道客户分布 TOP10 - ${getRangeLabel()}</div>
         ${streetHtml || '<div style="color:#6b7280;font-size:13px;">暂无街道数据</div>'}
       </div>
+      <div style="margin-top:20px">
+        <div style="font-size:14px;font-weight:600;margin-bottom:8px;color:#e0e7ff">客户明细 (${customers.length} 户) - ${getRangeLabel()}</div>
+        <div class="tv-cust-list">${customerHtml || '<div style="color:#6b7280;font-size:13px;">暂无客户记录</div>'}</div>
+      </div>
     </div>
   `;
+}
+
+function getRangeCustomerList(district) {
+  if (!data.addressDetails) return [];
+  let months;
+  if (currentMonth === 'all') {
+    months = Object.keys(data.addressDetails).sort();
+  } else {
+    months = [currentMonth];
+  }
+  const customers = [];
+  months.forEach(m => {
+    const items = data.addressDetails[m] || [];
+    items.forEach(item => {
+      if (item.district === district) {
+        customers.push({ name: item.name, street: item.street, detail: item.detail, vip: item.vip, month: m });
+      }
+    });
+  });
+  return customers;
 }
 
 // ========== Mobile View ==========
