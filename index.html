@@ -72,7 +72,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
 :fullscreen .tv-view { padding: 20px; }
 
 /* ========== Mobile View ========== */
-.mobile-view { min-height: 100vh; background: var(--mobile-bg); color: var(--mobile-text); padding: 76px 16px 80px; max-width: 500px; margin: 0 auto; }
+.mobile-view { min-height: 100vh; background: var(--mobile-bg); color: var(--mobile-text); padding: 76px 16px 40px; max-width: 500px; margin: 0 auto; }
 .mobile-header { margin-bottom: 16px; }
 .mobile-title { font-size: 20px; font-weight: 700; color: var(--mobile-text); }
 .mobile-subtitle { font-size: 13px; color: var(--mobile-dim); margin-top: 4px; }
@@ -178,31 +178,18 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
     <div class="mobile-subtitle" id="mobileSubtitle">点击地图区域查看详情</div>
   </div>
   <div class="mobile-stats" id="mobileStats"></div>
-  <div class="mobile-section active" id="mobileSectionMap">
-    <div class="mobile-map-container">
-      <div class="mobile-map-title">
-        <span id="mobileMapTitle">宜昌市客户分布</span>
-        <button class="mobile-back-btn" id="mobileBackBtn">← 返回</button>
-      </div>
-      <div class="mobile-map" id="mobileMap"></div>
+  <div class="mobile-map-container">
+    <div class="mobile-map-title">
+      <span id="mobileMapTitle">宜昌市客户分布</span>
+      <button class="mobile-back-btn" id="mobileBackBtn">← 返回</button>
     </div>
+    <div class="mobile-map" id="mobileMap"></div>
   </div>
-  <div class="mobile-section" id="mobileSectionCharts">
-    <div class="mobile-map-container">
-      <div class="mobile-map-title"><span>客户排名</span></div>
-      <div class="mobile-map" id="mobileRankChart" style="height:400px;"></div>
-    </div>
+  <div class="mobile-map-container">
+    <div class="mobile-map-title"><span id="mobilePanelTitle">各区县客户排名</span></div>
+    <div id="mobileRankList"></div>
   </div>
-  <div class="mobile-section" id="mobileSectionDetail">
-    <div class="mobile-detail" id="mobileDetailContent">
-      <p style="color:var(--mobile-dim);text-align:center;padding:40px 0;">点击地图上的区县查看详情</p>
-    </div>
-  </div>
-  <div class="mobile-tab-bar">
-    <div class="mobile-tab active" data-section="mobileSectionMap"><div class="icon">🗺️</div><div class="text">地图</div></div>
-    <div class="mobile-tab" data-section="mobileSectionCharts"><div class="icon">📊</div><div class="text">图表</div></div>
-    <div class="mobile-tab" data-section="mobileSectionDetail"><div class="icon">📋</div><div class="text">明细</div></div>
-  </div>
+  <div class="mobile-detail" id="mobileDetailContent" style="display:none;"></div>
 </div>
 
 <!-- Upload View -->
@@ -814,31 +801,33 @@ function initMobile() {
     }
   });
 
-  renderMobileRankChart();
+  renderMobileRankList();
 }
 
-function renderMobileRankChart() {
-  const el = document.getElementById('mobileRankChart');
-  if (!el) return;
-  if (!mobileRankChartInstance) {
-    mobileRankChartInstance = echarts.init(el);
-  }
-
+function renderMobileRankList() {
   const districts = Object.entries(data.districtData).map(([name, d]) => ({
     name, total: d.total, vip: d.vip
   })).sort((a, b) => b.total - a.total);
+  const maxTotal = Math.max(...districts.map(d => d.total), 1);
 
-  mobileRankChartInstance.setOption({
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    legend: { data: ['客户总数', 'VIP客户'], bottom: 0, textStyle: { fontSize: 11 } },
-    grid: { left: '3%', right: '4%', bottom: '15%', top: '5%', containLabel: true },
-    xAxis: { type: 'value', axisLabel: { fontSize: 10 } },
-    yAxis: { type: 'category', data: districts.map(d => d.name), axisLabel: { fontSize: 10 } },
-    series: [
-      { name: '客户总数', type: 'bar', data: districts.map(d => d.total), itemStyle: { color: '#3b82f6' } },
-      { name: 'VIP客户', type: 'bar', data: districts.map(d => d.vip), itemStyle: { color: '#10b981' } }
-    ]
-  });
+  document.getElementById('mobilePanelTitle').textContent = '各区县客户排名';
+  document.getElementById('mobileRankList').innerHTML = districts.map((d, i) => {
+    const barW = (d.total / maxTotal * 100).toFixed(1);
+    const vipPct = (d.vip / d.total * 100).toFixed(1);
+    return `<div class="mobile-street-row" style="padding:10px 0;">
+      <div style="flex:1;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="name" style="font-weight:600;">${i+1}. ${d.name}</span>
+          <span class="val" style="font-size:12px;">${d.total}户 · VIP ${d.vip} (${vipPct}%)</span>
+        </div>
+        <div style="margin-top:4px;height:6px;background:#f3f4f6;border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:${barW}%;background:linear-gradient(90deg,#3b82f6,#60a5fa);border-radius:3px;"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('mobileDetailContent').style.display = 'none';
+  document.getElementById('mobileRankList').parentElement.style.display = 'block';
 }
 
 function showMobileDetail(districtName) {
@@ -876,7 +865,7 @@ function showMobileDetail(districtName) {
     }, true);
   }
 
-  // Also render detail content
+  // Render detail content inline below map
   const dd = data.districtData[districtName];
   const streetData = data.streetData[districtName] || {};
   const streetList = Object.entries(streetData).map(([name, d]) => ({
@@ -884,15 +873,14 @@ function showMobileDetail(districtName) {
   })).sort((a, b) => b.total - a.total);
 
   const rate = (dd.vip / dd.total * 100).toFixed(1);
-  document.getElementById('mobileDetailContent').innerHTML = `
-    <div class="mobile-detail-name">${districtName}</div>
-    <div class="mobile-detail-grid">
+  document.getElementById('mobilePanelTitle').textContent = districtName + ' - 街道详情';
+  document.getElementById('mobileRankList').innerHTML = `
+    <div class="mobile-detail-grid" style="margin-bottom:12px;">
       <div class="mobile-detail-stat"><div class="label">客户总数</div><div class="value" style="color:#3b82f6">${dd.total}</div></div>
       <div class="mobile-detail-stat"><div class="label">VIP客户</div><div class="value" style="color:#10b981">${dd.vip}</div></div>
       <div class="mobile-detail-stat"><div class="label">普通客户</div><div class="value" style="color:#06b6d4">${dd.total - dd.vip}</div></div>
       <div class="mobile-detail-stat"><div class="label">VIP占比</div><div class="value" style="color:#f59e0b">${rate}%</div></div>
     </div>
-    <div style="font-size:14px;font-weight:600;margin:16px 0 8px;">街道客户分布</div>
     <div class="mobile-street-list">
       ${streetList.map(s => `<div class="mobile-street-row"><span class="name">${s.name}</span><span class="val">${s.total}户 (VIP ${s.vip})</span></div>`).join('')}
     </div>
@@ -1110,18 +1098,6 @@ document.getElementById('fullscreenBtn').addEventListener('click', () => {
 document.getElementById('submitBtn').addEventListener('click', submitData);
 document.getElementById('resetBtn').addEventListener('click', resetData);
 
-document.querySelectorAll('.mobile-tab').forEach(tab => {
-  tab.addEventListener('click', function() {
-    document.querySelectorAll('.mobile-tab').forEach(t => t.classList.remove('active'));
-    this.classList.add('active');
-    document.querySelectorAll('.mobile-section').forEach(s => s.classList.remove('active'));
-    document.getElementById(this.dataset.section).classList.add('active');
-    if (this.dataset.section === 'mobileSectionCharts' && mobileRankChartInstance) {
-      setTimeout(() => mobileRankChartInstance.resize(), 100);
-    }
-  });
-});
-
 // Initial route - auto detect device
 detectedDevice = detectDevice();
 const hash = location.hash.replace('#', '') || (detectedDevice === 'mobile' ? 'tv' : 'tv');
@@ -1148,7 +1124,6 @@ window.addEventListener('resize', () => {
     // Resize charts
     if (tvChart) tvChart.resize();
     if (mobileChart) mobileChart.resize();
-    if (mobileRankChartInstance) mobileRankChartInstance.resize();
   }, 300);
 });
 
