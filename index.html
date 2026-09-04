@@ -142,9 +142,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
 <!-- Navigation Bar -->
 <div class="nav-bar">
   <div class="nav-logo"><span class="dot connecting" id="syncDot"></span>宜昌客户分布<span class="sync-status" id="syncStatus">连接中...</span></div>
-  <div class="nav-tabs">
+  <div class="nav-tabs" id="navTabs">
     <a class="nav-tab" href="#tv" data-view="tv">展厅大屏</a>
-    <a class="nav-tab" href="#mobile" data-view="mobile">手机查看</a>
     <a class="nav-tab" href="#upload" data-view="upload">数据上传</a>
   </div>
   <div class="nav-clock" id="navClock"></div>
@@ -208,15 +207,32 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
 
 <!-- Upload View -->
 <div id="uploadView" class="upload-view" style="display:none;">
-  <div class="upload-header">
-    <div class="upload-title">数据上传</div>
-    <div class="upload-subtitle">编辑各区县客户数据，提交后实时同步到所有设备</div>
+  <!-- Admin Login Gate -->
+  <div id="adminLoginGate" style="max-width:400px;margin:60px auto;background:var(--mobile-card);border-radius:16px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="font-size:48px;margin-bottom:12px;">🔐</div>
+      <div style="font-size:20px;font-weight:700;color:var(--mobile-text);">管理员验证</div>
+      <div style="font-size:13px;color:var(--mobile-dim);margin-top:4px;">仅管理员可编辑和上传客户数据</div>
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:13px;color:var(--mobile-dim);display:block;margin-bottom:6px;">管理员密码：</label>
+      <input type="password" id="adminPwd" placeholder="请输入管理员密码" style="width:100%;padding:12px 16px;border:2px solid #e5e7eb;border-radius:10px;font-size:14px;" onkeydown="if(event.key==='Enter')tryAdminLogin()">
+    </div>
+    <button class="btn-primary" style="width:100%;" onclick="tryAdminLogin()">验证登录</button>
+    <div style="font-size:11px;color:var(--mobile-dim);margin-top:12px;text-align:center;">密码保存在浏览器本地，关闭后需重新输入</div>
+    <div id="adminLoginError" style="color:var(--tv-danger);font-size:13px;margin-top:8px;text-align:center;display:none;">密码错误，请重试</div>
   </div>
-  <div class="upload-info">
-    💡 <b>跨设备实时同步</b>：提交数据后，所有展厅大屏和手机端自动刷新（基于 Supabase 实时数据库）。<br>
-    📱 多人协作：不同设备多人可同时编辑，提交后即时同步到所有设备。<br>
-    🔴 右上角状态：绿色"已同步"=云端在线，红色"离线模式"=仅本地存储。
-  </div>
+  <!-- Upload Content (only visible after admin login) -->
+  <div id="uploadContent" style="display:none;">
+    <div class="upload-header">
+      <div class="upload-title">数据上传 <span style="font-size:14px;color:var(--tv-success);">✓ 管理员</span></div>
+      <div class="upload-subtitle">编辑各区县客户数据，提交后实时同步到所有设备</div>
+    </div>
+    <div class="upload-info">
+      💡 <b>跨设备实时同步</b>：提交数据后，所有展厅大屏和手机端自动刷新。<br>
+      📱 多人协作：管理员可编辑数据，提交后即时同步到所有设备。<br>
+      🔴 右上角状态：绿色"已同步"=云端在线，红色"离线模式"=仅本地存储。
+    </div>
   <div class="upload-user">
     <label style="font-size:13px;color:var(--mobile-dim);margin-right:8px;">您的姓名：</label>
     <input type="text" id="userName" placeholder="请输入姓名">
@@ -232,6 +248,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
     <button class="btn-secondary" id="resetBtn">恢复默认</button>
   </div>
   <div class="upload-last-update" id="uploadLastUpdate"></div>
+  </div><!-- /uploadContent -->
 </div>
 
 <div class="toast" id="toast"></div>
@@ -261,12 +278,61 @@ let mobileChart = null;
 let mobileRankChartInstance = null;
 let currentDrillDistrict = null;
 let data = null;
+let isAdmin = false;
+let detectedDevice = 'desktop'; // 'mobile', 'tablet', 'desktop'
 
 const STORAGE_KEY = 'yichang_customer_data';
 const UPDATE_KEY = 'yichang_last_update';
+const ADMIN_KEY = 'yichang_admin_auth';
+
+// 管理员密码（可修改为你想要的密码）
+const ADMIN_PASSWORD = 'yichang2026';
 
 // BroadcastChannel for same-browser cross-tab sync (fallback)
 const bc = new BroadcastChannel('yichang_sync');
+
+// ========== Device Detection ==========
+function detectDevice() {
+  const ua = navigator.userAgent.toLowerCase();
+  const width = window.innerWidth;
+  const isMobile = /mobile|iphone|ipod|android.*mobile|windows phone|blackberry|opera mini/.test(ua);
+  const isTablet = /ipad|tablet|kindle|silk|playbook|android(?!.*mobile)/.test(ua);
+  
+  if (isMobile || (width < 768 && !isTablet)) return 'mobile';
+  if (isTablet || (width >= 768 && width < 1200)) return 'tablet';
+  return 'desktop';
+}
+
+// ========== Admin Login ==========
+function tryAdminLogin() {
+  const pwd = document.getElementById('adminPwd').value;
+  if (pwd === ADMIN_PASSWORD) {
+    isAdmin = true;
+    localStorage.setItem(ADMIN_KEY, 'true');
+    document.getElementById('adminLoginGate').style.display = 'none';
+    document.getElementById('uploadContent').style.display = 'block';
+    initUpload();
+    showToast('管理员登录成功');
+  } else {
+    document.getElementById('adminLoginError').style.display = 'block';
+    document.getElementById('adminPwd').value = '';
+    setTimeout(() => {
+      document.getElementById('adminLoginError').style.display = 'none';
+    }, 3000);
+  }
+}
+
+function checkAdminAuth() {
+  if (localStorage.getItem(ADMIN_KEY) === 'true') {
+    isAdmin = true;
+    const gate = document.getElementById('adminLoginGate');
+    const content = document.getElementById('uploadContent');
+    if (gate) gate.style.display = 'none';
+    if (content) content.style.display = 'block';
+    return true;
+  }
+  return false;
+}
 
 // ========== Sync Status ==========
 function setSyncStatus(status) {
@@ -955,30 +1021,57 @@ function resetData() {
 // ========== View Routing ==========
 function switchView(view) {
   currentView = view;
+  
+  // Auto-detect device and pick appropriate map view
+  detectedDevice = detectDevice();
+  const isSmallScreen = detectedDevice === 'mobile';
+  
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
-  document.getElementById('tvView').style.display = view === 'tv' ? 'block' : 'none';
-  document.getElementById('mobileView').style.display = view === 'mobile' ? 'block' : 'none';
-  document.getElementById('uploadView').style.display = view === 'upload' ? 'block' : 'none';
-
-  if (view === 'tv') { setTimeout(initTV, 100); }
-  else if (view === 'mobile') { setTimeout(initMobile, 100); }
-  else if (view === 'upload') { initUpload(); }
+  
+  if (view === 'upload') {
+    // Upload view is the same on all devices
+    document.getElementById('tvView').style.display = 'none';
+    document.getElementById('mobileView').style.display = 'none';
+    document.getElementById('uploadView').style.display = 'block';
+    if (!checkAdminAuth()) {
+      document.getElementById('adminLoginGate').style.display = 'block';
+      document.getElementById('uploadContent').style.display = 'none';
+    } else {
+      document.getElementById('adminLoginGate').style.display = 'none';
+      document.getElementById('uploadContent').style.display = 'block';
+      initUpload();
+    }
+  } else if (isSmallScreen) {
+    // Mobile device: show mobile view
+    document.getElementById('tvView').style.display = 'none';
+    document.getElementById('mobileView').style.display = 'block';
+    document.getElementById('uploadView').style.display = 'none';
+    setTimeout(initMobile, 100);
+  } else {
+    // Desktop/tablet/TV: show TV view
+    document.getElementById('tvView').style.display = 'block';
+    document.getElementById('mobileView').style.display = 'none';
+    document.getElementById('uploadView').style.display = 'none';
+    setTimeout(initTV, 100);
+  }
 }
 
 function refreshCurrentView() {
-  if (currentView === 'tv') {
+  if (currentView === 'upload') {
+    if (isAdmin) initUpload();
+    return;
+  }
+  detectedDevice = detectDevice();
+  if (detectedDevice === 'mobile') {
+    initMobile();
+  } else {
     if (currentDrillDistrict) {
       renderTVDetailPanel(currentDrillDistrict);
-      // Re-render street map with new data
       drillToDistrict(currentDrillDistrict);
     } else {
       renderTVOverview();
       renderTVRankList();
     }
-  } else if (currentView === 'mobile') {
-    initMobile();
-  } else if (currentView === 'upload') {
-    initUpload();
   }
 }
 
@@ -1029,8 +1122,9 @@ document.querySelectorAll('.mobile-tab').forEach(tab => {
   });
 });
 
-// Initial route
-const hash = location.hash.replace('#', '') || 'tv';
+// Initial route - auto detect device
+detectedDevice = detectDevice();
+const hash = location.hash.replace('#', '') || (detectedDevice === 'mobile' ? 'tv' : 'tv');
 switchView(hash);
 updateClock();
 setInterval(updateClock, 1000);
@@ -1039,6 +1133,23 @@ setInterval(updateClock, 1000);
 window.addEventListener('hashchange', () => {
   const h = location.hash.replace('#', '') || 'tv';
   switchView(h);
+});
+
+// Auto-switch view on device orientation / size change
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    const newDevice = detectDevice();
+    if (newDevice !== detectedDevice && currentView !== 'upload') {
+      detectedDevice = newDevice;
+      switchView(currentView);
+    }
+    // Resize charts
+    if (tvChart) tvChart.resize();
+    if (mobileChart) mobileChart.resize();
+    if (mobileRankChartInstance) mobileRankChartInstance.resize();
+  }, 300);
 });
 
 // Load update info
