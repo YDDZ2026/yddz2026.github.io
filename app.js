@@ -733,18 +733,20 @@ function getRangeCustomerList(district) {
   if (!data.addressDetails) return [];
   let months;
   if (currentMonth === 'all') {
-    months = Object.keys(data.addressDetails).sort();
+    months = Object.keys(data.addressDetails).sort().reverse();
   } else {
     months = [currentMonth];
   }
   const customers = [];
   months.forEach(m => {
     const items = data.addressDetails[m] || [];
-    items.forEach(item => {
+    // Reverse within each month too (latest entries first)
+    for (let i = items.length - 1; i >= 0; i--) {
+      const item = items[i];
       if (item.district === district) {
         customers.push({ name: item.name, street: item.street, detail: item.detail, vip: item.vip, month: m });
       }
-    });
+    }
   });
   return customers;
 }
