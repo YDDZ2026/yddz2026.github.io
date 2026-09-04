@@ -549,10 +549,10 @@ function renderTVOverview() {
       borderColor: '#2a4a7f',
       borderWidth: 1
     },
-    label: { show: true, color: '#fff', fontSize: 11, fontWeight: 'bold', textBorderColor: '#1e3a5f', textBorderWidth: 2, textShadowColor: 'rgba(0,0,0,0.4)', textShadowBlur: 3 },
+    label: { show: true, formatter: '{b}', color: '#0a1929', fontSize: 12, fontWeight: 'bold', textBorderColor: '#fff', textBorderWidth: 2 },
     emphasis: {
       itemStyle: { areaColor: '#3b82f6', shadowBlur: 20, shadowColor: 'rgba(59,130,246,0.5)' },
-      label: { show: true, color: '#fff', fontSize: 13, fontWeight: 'bold', textBorderColor: '#1e3a5f', textBorderWidth: 2 }
+      label: { show: true, formatter: '{b}', color: '#fff', fontSize: 14, fontWeight: 'bold', textBorderColor: '#1e3a5f', textBorderWidth: 2 }
     }
   }));
 
@@ -575,10 +575,10 @@ function renderTVOverview() {
       map: 'yichang',
       roam: true,
       zoom: 1.2,
-      label: { show: true, color: '#fff', fontSize: 11, fontWeight: 'bold', textBorderColor: '#1e3a5f', textBorderWidth: 2, textShadowColor: 'rgba(0,0,0,0.4)', textShadowBlur: 3 },
+      label: { show: true, formatter: '{b}', color: '#0a1929', fontSize: 12, fontWeight: 'bold', textBorderColor: '#fff', textBorderWidth: 2 },
       labelLayout: { hideOverlap: false },
       itemStyle: { borderColor: '#2a4a7f', borderWidth: 1 },
-      emphasis: { label: { show: true, color: '#fff', fontSize: 13, fontWeight: 'bold', textBorderColor: '#1e3a5f', textBorderWidth: 2 }, itemStyle: { areaColor: '#3b82f6' } },
+      emphasis: { label: { show: true, formatter: '{b}', color: '#fff', fontSize: 14, fontWeight: 'bold', textBorderColor: '#1e3a5f', textBorderWidth: 2 }, itemStyle: { areaColor: '#3b82f6' } },
       data: seriesData
     }]
   }, true);
@@ -624,7 +624,7 @@ function drillToDistrict(districtName) {
       borderColor: '#2a4a7f',
       borderWidth: 1
     },
-    label: { show: true, color: '#fff', fontSize: 10, fontWeight: 'bold', textBorderColor: '#1e3a5f', textBorderWidth: 2, textShadowColor: 'rgba(0,0,0,0.4)', textShadowBlur: 3 }
+    label: { show: true, formatter: '{b}', color: '#0a1929', fontSize: 11, fontWeight: 'bold', textBorderColor: '#fff', textBorderWidth: 2 }
   }));
 
   tvChart.setOption({
@@ -646,10 +646,10 @@ function drillToDistrict(districtName) {
       map: mapName,
       roam: true,
       zoom: 1.2,
-      label: { show: true, color: '#fff', fontSize: 10, fontWeight: 'bold', textBorderColor: '#1e3a5f', textBorderWidth: 2, textShadowColor: 'rgba(0,0,0,0.4)', textShadowBlur: 3 },
+      label: { show: true, formatter: '{b}', color: '#0a1929', fontSize: 11, fontWeight: 'bold', textBorderColor: '#fff', textBorderWidth: 2 },
       labelLayout: { hideOverlap: false },
       itemStyle: { borderColor: '#2a4a7f', borderWidth: 1 },
-      emphasis: { label: { show: true, color: '#fff', fontSize: 12, fontWeight: 'bold', textBorderColor: '#1e3a5f', textBorderWidth: 2 }, itemStyle: { areaColor: '#3b82f6' } },
+      emphasis: { label: { show: true, formatter: '{b}', color: '#fff', fontSize: 13, fontWeight: 'bold', textBorderColor: '#1e3a5f', textBorderWidth: 2 }, itemStyle: { areaColor: '#3b82f6' } },
       data: seriesData
     }]
   }, true);
@@ -777,7 +777,7 @@ function initMobile() {
     value: d.total,
     vip: d.vip,
     itemStyle: { areaColor: getColorForValue(d.total, maxVal), borderColor: '#cbd5e1', borderWidth: 0.5 },
-    label: { show: true, color: '#1e293b', fontSize: 9, fontWeight: 'bold', textBorderColor: '#fff', textBorderWidth: 2 }
+    label: { show: true, formatter: '{b}', color: '#0a1929', fontSize: 10, fontWeight: 'bold', textBorderColor: '#fff', textBorderWidth: 2 }
   }));
 
   mobileChart.setOption({
@@ -793,10 +793,10 @@ function initMobile() {
       map: 'yichang',
       roam: true,
       zoom: 1.2,
-      label: { show: true, color: '#1e293b', fontSize: 9, fontWeight: 'bold', textBorderColor: '#fff', textBorderWidth: 2 },
+      label: { show: true, formatter: '{b}', color: '#0a1929', fontSize: 10, fontWeight: 'bold', textBorderColor: '#fff', textBorderWidth: 2 },
       labelLayout: { hideOverlap: false },
       itemStyle: { borderColor: '#cbd5e1', borderWidth: 0.5 },
-      emphasis: { label: { show: true, color: '#fff', fontSize: 11, fontWeight: 'bold', textBorderColor: '#1e3a5f', textBorderWidth: 2 }, itemStyle: { areaColor: '#3b82f6' } },
+      emphasis: { label: { show: true, formatter: '{b}', color: '#fff', fontSize: 12, fontWeight: 'bold', textBorderColor: '#1e3a5f', textBorderWidth: 2 }, itemStyle: { areaColor: '#3b82f6' } },
       data: seriesData
     }]
   }, true);
@@ -861,10 +861,10 @@ function showMobileDetail(districtName) {
         map: mapName,
         roam: true,
         zoom: 1.2,
-        label: { show: true, color: '#1e293b', fontSize: 9, fontWeight: 'bold', textBorderColor: '#fff', textBorderWidth: 2 },
+        label: { show: true, formatter: '{b}', color: '#0a1929', fontSize: 10, fontWeight: 'bold', textBorderColor: '#fff', textBorderWidth: 2 },
         labelLayout: { hideOverlap: false },
         itemStyle: { borderColor: '#cbd5e1', borderWidth: 0.5 },
-        emphasis: { label: { show: true, color: '#fff', fontSize: 11, fontWeight: 'bold', textBorderColor: '#1e3a5f', textBorderWidth: 2 }, itemStyle: { areaColor: '#3b82f6' } },
+        emphasis: { label: { show: true, formatter: '{b}', color: '#fff', fontSize: 12, fontWeight: 'bold', textBorderColor: '#1e3a5f', textBorderWidth: 2 }, itemStyle: { areaColor: '#3b82f6' } },
         data: streets.map(s => ({
           name: s.name, value: s.value, vip: s.vip,
           itemStyle: { areaColor: getColorForValue(s.value, maxVal) }
