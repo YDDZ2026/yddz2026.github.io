@@ -644,6 +644,18 @@ function drillToDistrict(districtName) {
   renderTVDetailPanel(districtName);
 }
 
+function showOtherDetailTV() {
+  currentDrillDistrict = '其他';
+  document.getElementById('tvMapTitle').textContent = '客户分布 - 其他 (市外) - ' + getRangeLabel();
+  document.getElementById('tvBackBtn').style.display = 'inline-block';
+  // Clear the map and show a placeholder message
+  tvChart.setOption({
+    title: { text: '市外客户\n（无街道地图数据）', left: 'center', top: 'center', textStyle: { color: '#6b7280', fontSize: 16, fontWeight: 'normal' } },
+    series: []
+  }, true);
+  renderTVDetailPanel('其他');
+}
+
 function backToOverview() {
   currentDrillDistrict = null;
   document.getElementById('tvMapTitle').textContent = '客户分布 - ' + getRangeLabel();
@@ -666,8 +678,8 @@ function renderTVRankList() {
     const pct = (d.total/maxVal*100).toFixed(0);
     const colors = ['#ef4444','#f59e0b','#3b82f6','#06b6d4','#10b981','#8b5cf6'];
     const color = d.isOther ? '#6b7280' : (colors[i%colors.length]);
-    const clickAttr = d.isOther ? '' : `onclick="drillToDistrict('${d.name}')" style="cursor:pointer"`;
-    html += `<div class="tv-rank-bar ${d.isOther?'':'clickable'}" ${clickAttr}><div class="row">
+    const clickAttr = d.isOther ? `onclick="showOtherDetailTV()" style="cursor:pointer"` : `onclick="drillToDistrict('${d.name}')" style="cursor:pointer"`;
+    html += `<div class="tv-rank-bar clickable" ${clickAttr}><div class="row">
       <span class="name" style="color:${d.isOther?'#6b7280':(i<3?color:'#6b7280')};font-weight:${d.isOther?'bold':(i<3?'bold':'normal')}">${i+1}. ${d.name}${d.isOther?' (市外)':''}</span>
       <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
       <span class="val">${d.total}</span>
@@ -813,8 +825,8 @@ function renderMobileRankList() {
     const barW = (d.total/maxTotal*100).toFixed(1);
     const vipPct = d.total>0?(d.vip/d.total*100).toFixed(1):'0.0';
     const label = d.isOther ? `${i+1}. 其他 (市外)` : `${i+1}. ${d.name}`;
-    const clickAttr = d.isOther ? '' : `onclick="showMobileDetail('${d.name}')"`;
-    return `<div class="mobile-street-row" ${clickAttr} style="padding:10px 0;${d.isOther?'':'cursor:pointer;transition:background 0.15s;'}" ${d.isOther?'':'onmouseover="this.style.background=\'#eff6ff\'" onmouseout="this.style.background=\'transparent\'"'}><div style="flex:1;">
+    const clickAttr = `onclick="showMobileDetail('${d.name}')"`;
+    return `<div class="mobile-street-row" ${clickAttr} style="padding:10px 0;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='transparent'"><div style="flex:1;">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <span class="name" style="font-weight:${d.isOther?'bold':'600'};color:${d.isOther?'#6b7280':'inherit'};">${label}</span>
         <span class="val" style="font-size:12px;">${d.total}户 · VIP ${d.vip} (${vipPct}%)</span>
