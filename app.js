@@ -12,8 +12,6 @@ const GITHUB_API = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB
 const GITHUB_RAW = `https://raw.githubusercontent.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.dataFile}`;
 const GITHUB_READ_ENABLED = true;
 let pollTimer = null;
-let autoCycleTimer = null;
-let autoCycleIndex = 0;
 let mapRotateTimer = null;
 let lastDataSHA = '';
 
@@ -530,71 +528,6 @@ function updateTicker() {
   document.getElementById('tvTickerText').innerHTML = parts.join(' &nbsp;|&nbsp; ');
 }
 
-function updateCycleToggleUI(isAuto) {
-  var autoBtn = document.getElementById('autoCycleBtn');
-  var manualBtn = document.getElementById('manualBtn');
-  var toggle = document.getElementById('cycleToggle');
-  if (!autoBtn || !manualBtn || !toggle) return;
-  if (isAuto) {
-    autoBtn.classList.add('active');
-    autoBtn.classList.remove('manual');
-    manualBtn.classList.remove('active');
-    toggle.style.borderColor = '#ef4444';
-  } else {
-    manualBtn.classList.add('active', 'manual');
-    autoBtn.classList.remove('active');
-    toggle.style.borderColor = '#3b82f6';
-  }
-}
-
-function toggleAutoCycle(autoOn) {
-  if (autoOn) {
-    startAutoCycle();
-    startMapRotation();
-  } else {
-    stopAutoCycle();
-    stopMapRotation();
-  }
-}
-
-function startAutoCycle() {
-  if (autoCycleTimer) clearInterval(autoCycleTimer);
-  if (currentView !== 'tv') return;
-
-  updateCycleToggleUI(true);
-
-  autoCycleIndex = 0;
-  autoCycleTimer = setInterval(() => {
-    if (currentView !== 'tv') { stopAutoCycle(); return; }
-    const names = data.districtNames || [];
-    if (names.length === 0) return;
-
-    // Cycle: overview -> district1 -> district2 -> ... -> overview
-    if (autoCycleIndex === 0) {
-      // Show overview
-      currentDrillDistrict = null;
-      document.getElementById('tvBackBtn').style.display = 'none';
-      document.getElementById('tvMapTitle').textContent = '客户分布 - ' + getRangeLabel();
-      renderTVOverview();
-      renderTVRankList();
-      updateTicker();
-    } else {
-      const idx = autoCycleIndex - 1;
-      if (idx < names.length) {
-        drillToDistrict(names[idx]);
-        updateTicker();
-      }
-    }
-    autoCycleIndex++;
-    if (autoCycleIndex > names.length) autoCycleIndex = 0;
-  }, 6000); // 6 seconds per view
-}
-
-function stopAutoCycle() {
-  if (autoCycleTimer) { clearInterval(autoCycleTimer); autoCycleTimer = null; }
-  updateCycleToggleUI(false);
-}
-
 function startMapRotation() {
   if (mapRotateTimer) clearInterval(mapRotateTimer);
   let angle = 0;
@@ -623,7 +556,6 @@ function initTV() {
   renderTVOverview();
   renderTVRankList();
   // Start exhibition animations
-  startAutoCycle();
   startMapRotation();
 }
 
@@ -684,7 +616,6 @@ function renderTVOverview() {
   tvChart.off('click');
   tvChart.on('click', function(params) {
     if (params.name) {
-      stopAutoCycle();
       stopMapRotation();
       drillToDistrict(params.name);
     }
@@ -742,8 +673,8 @@ function backToOverview() {
   document.getElementById('tvBackBtn').style.display = 'none';
   renderTVOverview();
   renderTVRankList();
-  // Resume auto cycle after manual back
-  setTimeout(() => { startAutoCycle(); startMapRotation(); }, 2000);
+  // Resume map animation after manual back
+  setTimeout(() => { startMapRotation(); }, 2000);
 }
 
 function renderTVRankList() {
@@ -1143,7 +1074,7 @@ function resetData() {
 // ========== View Routing ==========
 function switchView(view) {
   // Stop animations when leaving TV view
-  if (currentView === 'tv' && view !== 'tv') { stopAutoCycle(); stopMapRotation(); }
+  if (currentView === 'tv' && view !== 'tv') { stopMapRotation(); }
   currentView = view;
   detectedDevice = detectDevice();
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
