@@ -12,7 +12,6 @@ const GITHUB_API = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB
 const GITHUB_RAW = `https://raw.githubusercontent.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.dataFile}`;
 const GITHUB_READ_ENABLED = true;
 let pollTimer = null;
-let highlightTimer = null;
 let lastDataSHA = '';
 
 // ========== App State ==========
@@ -528,37 +527,6 @@ function updateTicker() {
   document.getElementById('tvTickerText').innerHTML = parts.join(' &nbsp;|&nbsp; ');
 }
 
-let highlightIndex = 0;
-
-function startDistrictHighlight() {
-  if (highlightTimer) clearInterval(highlightTimer);
-  highlightIndex = 0;
-  highlightTimer = setInterval(() => {
-    if (currentView !== 'tv' || !tvChart || currentDrillDistrict) return;
-    const names = data.districtNames || [];
-    if (names.length === 0) return;
-
-    // Downplay previous
-    if (highlightIndex > 0) {
-      const prev = names[(highlightIndex - 1) % names.length];
-      tvChart.dispatchAction({ type: 'downplay', seriesIndex: 0, name: prev });
-    }
-    // Highlight current district
-    const curr = names[highlightIndex % names.length];
-    tvChart.dispatchAction({ type: 'highlight', seriesIndex: 0, name: curr });
-    highlightIndex++;
-  }, 3000);
-}
-
-function stopDistrictHighlight() {
-  if (highlightTimer) { clearInterval(highlightTimer); highlightTimer = null; }
-  // Clear any lingering highlight
-  if (tvChart) {
-    const names = data.districtNames || [];
-    names.forEach(n => tvChart.dispatchAction({ type: 'downplay', seriesIndex: 0, name: n }));
-  }
-}
-
 function initTV() {
   if (!tvChart) {
     tvChart = echarts.init(document.getElementById('tvMap'));
@@ -567,8 +535,6 @@ function initTV() {
   echarts.registerMap('yichang', data.districtGeo);
   renderTVOverview();
   renderTVRankList();
-  // Start exhibition animations
-  startDistrictHighlight();
 }
 
 function renderTVOverview() {
@@ -628,7 +594,6 @@ function renderTVOverview() {
   tvChart.off('click');
   tvChart.on('click', function(params) {
     if (params.name) {
-      stopDistrictHighlight();
       drillToDistrict(params.name);
     }
   });
@@ -685,8 +650,6 @@ function backToOverview() {
   document.getElementById('tvBackBtn').style.display = 'none';
   renderTVOverview();
   renderTVRankList();
-  // Resume map animation after manual back
-  setTimeout(() => { startDistrictHighlight(); }, 2000);
 }
 
 function renderTVRankList() {
@@ -1085,8 +1048,6 @@ function resetData() {
 
 // ========== View Routing ==========
 function switchView(view) {
-  // Stop animations when leaving TV view
-  if (currentView === 'tv' && view !== 'tv') { stopDistrictHighlight(); }
   currentView = view;
   detectedDevice = detectDevice();
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
