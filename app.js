@@ -666,7 +666,8 @@ function renderTVRankList() {
     const pct = (d.total/maxVal*100).toFixed(0);
     const colors = ['#ef4444','#f59e0b','#3b82f6','#06b6d4','#10b981','#8b5cf6'];
     const color = d.isOther ? '#6b7280' : (colors[i%colors.length]);
-    html += `<div class="tv-rank-bar"><div class="row">
+    const clickAttr = d.isOther ? '' : `onclick="drillToDistrict('${d.name}')" style="cursor:pointer"`;
+    html += `<div class="tv-rank-bar ${d.isOther?'':'clickable'}" ${clickAttr}><div class="row">
       <span class="name" style="color:${d.isOther?'#6b7280':(i<3?color:'#6b7280')};font-weight:${d.isOther?'bold':(i<3?'bold':'normal')}">${i+1}. ${d.name}${d.isOther?' (市外)':''}</span>
       <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
       <span class="val">${d.total}</span>
