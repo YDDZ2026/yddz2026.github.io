@@ -336,7 +336,7 @@ async function loadFromGitHub() {
         lastDataSHA = newSHA;
         data.monthlyData = cloudData.monthlyData;
         if (cloudData.addressDetails) data.addressDetails = cloudData.addressDetails;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ monthlyData: data.monthlyData, addressDetails: data.addressDetails || {} }));
         const info = { name: cloudData.updated_by || '系统', time: cloudData.updated_at ? new Date(cloudData.updated_at).toLocaleString('zh-CN', {hour12: false}) : '' };
         localStorage.setItem(UPDATE_KEY, JSON.stringify(info));
         updateLastUpdate(info);
@@ -374,12 +374,16 @@ function startPolling() {
 
 // ========== Data Management ==========
 function loadData() {
+  // Always start with EMBEDDED_DATA for static map data (districtGeo, streetsGeo, etc.)
+  data = JSON.parse(JSON.stringify(EMBEDDED_DATA));
+  // Only load dynamic data (monthlyData, addressDetails) from localStorage
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
-    try { data = JSON.parse(stored); } catch(e) { data = JSON.parse(JSON.stringify(EMBEDDED_DATA)); }
-  } else {
-    data = JSON.parse(JSON.stringify(EMBEDDED_DATA));
-    saveData();
+    try {
+      const saved = JSON.parse(stored);
+      if (saved.monthlyData) data.monthlyData = saved.monthlyData;
+      if (saved.addressDetails) data.addressDetails = saved.addressDetails;
+    } catch(e) { /* ignore corrupt localStorage */ }
   }
   if (!data.addressDetails) data.addressDetails = {};
   if (!data.monthlyData) data.monthlyData = { '2026-08': { districtData: {}, streetData: {} } };
@@ -399,7 +403,9 @@ function loadData() {
 
 function saveData(updater) {
   const info = { name: updater || '系统', time: new Date().toLocaleString('zh-CN', {hour12: false}) };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  // Only save dynamic data to localStorage, NOT the 211KB of static map data
+  const slimData = { monthlyData: data.monthlyData, addressDetails: data.addressDetails || {} };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(slimData));
   localStorage.setItem(UPDATE_KEY, JSON.stringify(info));
   bc.postMessage({type: 'data_update', data: data, update: info});
   saveToGitHub(updater);
