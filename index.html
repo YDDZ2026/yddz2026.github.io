@@ -7,9 +7,9 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="dns-prefetch" href="https://api.github.com">
 <link rel="preload" href="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" as="script" crossorigin>
-<link rel="preload" href="https://cdn.jsdelivr.net/gh/yddz2026/yddz2026.github.io@main/app.js?v=20260904c" as="script" crossorigin>
+<link rel="preload" href="https://cdn.jsdelivr.net/gh/yddz2026/yddz2026.github.io@main/app.js?v=20260904d" as="script" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/gh/yddz2026/yddz2026.github.io@main/app.js?v=20260904c"></script>
+<script defer src="https://cdn.jsdelivr.net/gh/yddz2026/yddz2026.github.io@main/app.js?v=20260904d"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
@@ -193,9 +193,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
   .tv-main { grid-template-columns: 1fr; height: auto; }
   .tv-panel { max-height: 400px; }
   .tv-stats { flex-wrap: wrap; }
-  .nav-tab { padding: 6px 10px; font-size: 12px; }
-  .nav-logo { font-size: 13px; }
-  .tv-title { font-size: 20px; }
+  .nav-bar { height: 44px; padding: 0 10px; justify-content: space-between; }
+  .nav-logo { font-size: 12px; gap: 5px; max-width: 160px; overflow: hidden; }
+  .nav-logo .sync-status { display: none; }
+  .nav-tabs { gap: 2px; flex-shrink: 0; }
+  .nav-tab { padding: 4px 8px; font-size: 11px; }
+  .nav-clock { display: none; }
+  .tv-title { font-size: 18px; }
 }
 
 /* ========== Animation Effects for Exhibition ========== */
