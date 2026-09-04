@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>宜都华晟达洲比亚迪客户分布</title>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/zh.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
@@ -31,13 +34,40 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
 .nav-tab.active { color: #fff; background: var(--tv-accent); }
 .nav-clock { font-size: 14px; color: var(--tv-dim); font-variant-numeric: tabular-nums; }
 
-/* ========== Month Selector ========== */
-.month-selector { display: flex; align-items: center; gap: 8px; }
-.month-selector label, .mobile-month-selector label { font-size: 13px; color: var(--tv-dim); white-space: nowrap; }
-.month-selector select { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--tv-border); background: var(--tv-card); color: var(--tv-text); font-size: 13px; cursor: pointer; }
-.month-selector select:focus { outline: none; border-color: var(--tv-accent); }
-.mobile-month-selector { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-.mobile-month-selector select { padding: 8px 14px; border-radius: 10px; border: 2px solid #e5e7eb; background: var(--mobile-card); color: var(--mobile-text); font-size: 14px; cursor: pointer; }
+/* ========== Date Range Picker ========== */
+.date-range-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.date-range-bar label { font-size: 13px; color: var(--tv-dim); white-space: nowrap; }
+.date-range-input { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--tv-border); background: var(--tv-card); color: var(--tv-text); font-size: 13px; cursor: pointer; min-width: 220px; }
+.date-range-input:focus { outline: none; border-color: var(--tv-accent); }
+.preset-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+.preset-btn { padding: 4px 10px; border-radius: 6px; border: 1px solid var(--tv-border); background: transparent; color: var(--tv-dim); font-size: 12px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+.preset-btn:hover { color: var(--tv-text); border-color: var(--tv-accent); background: rgba(59,130,246,0.1); }
+.preset-btn.active { color: #fff; background: var(--tv-accent); border-color: var(--tv-accent); }
+.mobile-date-range { margin-bottom: 12px; }
+.mobile-date-range label { font-size: 13px; color: var(--mobile-dim); }
+.mobile-date-input { padding: 8px 14px; border-radius: 10px; border: 2px solid #e5e7eb; background: var(--mobile-card); color: var(--mobile-text); font-size: 14px; cursor: pointer; width: 100%; margin-top: 4px; }
+.mobile-preset-btns { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+.mobile-preset-btn { padding: 6px 10px; border-radius: 8px; border: 1px solid #e5e7eb; background: var(--mobile-card); color: var(--mobile-dim); font-size: 12px; cursor: pointer; }
+.mobile-preset-btn.active { color: #fff; background: var(--mobile-accent); border-color: var(--mobile-accent); }
+.flatpickr-calendar { background: var(--tv-card); border: 1px solid var(--tv-border); box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+.flatpickr-calendar.hasTime .flatpickr-time { border-top: 1px solid var(--tv-border); }
+.flatpickr-calendar.arrowTop:before, .flatpickr-calendar.arrowTop:after { display: none; }
+.flatpickr-months .flatpickr-month { background: var(--tv-card); }
+.flatpickr-months .flatpickr-month, .flatpickr-months .flatpickr-next-month, .flatpickr-months .flatpickr-prev-month { fill: var(--tv-text); color: var(--tv-text); }
+.flatpickr-current-month .numInputWrapper span.arrowUp:after { border-bottom-color: var(--tv-text); }
+.flatpickr-current-month .numInputWrapper span.arrowDown:after { border-top-color: var(--tv-text); }
+.flatpickr-current-month input.cur-year { color: var(--tv-text); }
+.flatpickr-weekday { color: var(--tv-dim); }
+.flatpickr-day { color: var(--tv-text); border: 1px solid transparent; }
+.flatpickr-day:hover { background: rgba(59,130,246,0.2); border-color: var(--tv-accent); }
+.flatpickr-day.selected, .flatpickr-day.inRange { background: var(--tv-accent); border-color: var(--tv-accent); }
+.flatpickr-day.selected.inRange { background: var(--tv-accent); }
+.flatpickr-day.startRange.inRange, .flatpickr-day.endRange.inRange { background: var(--tv-accent); }
+.flatpickr-day.prevMonthDay, .flatpickr-day.nextMonthDay { color: var(--tv-dim); }
+.flatpickr-day.disabled { color: var(--tv-dim); opacity: 0.3; }
+.dayContainer { width: 280px; min-width: 280px; max-width: 280px; }
+.flatpickr-calendar { width: 640px; }
+.flatpickr-months .flatpickr-prev-month, .flatpickr-months .flatpickr-next-month { padding: 8px; }
 
 /* ========== TV View ========== */
 .tv-view { min-height: 100vh; background: var(--tv-bg); color: var(--tv-text); padding: 76px 20px 20px; }
@@ -161,9 +191,18 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
   <div class="tv-header">
     <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
       <div class="tv-title">宜都华晟达洲比亚迪 · 宜昌客户分布</div>
-      <div class="month-selector">
-        <label>查询月份：</label>
-        <select id="tvMonthSelect" onchange="onMonthChange()"></select>
+      <div class="date-range-bar">
+        <label>查询范围：</label>
+        <input type="text" class="date-range-input" id="tvDateRange" placeholder="选择日期范围" readonly>
+        <div class="preset-btns" id="tvPresetBtns">
+          <button class="preset-btn" data-preset="today">今日</button>
+          <button class="preset-btn" data-preset="yesterday">昨日</button>
+          <button class="preset-btn" data-preset="week">最近一周</button>
+          <button class="preset-btn" data-preset="month">最近一月</button>
+          <button class="preset-btn" data-preset="quarter">最近三月</button>
+          <button class="preset-btn" data-preset="year">最近一年</button>
+          <button class="preset-btn active" data-preset="all">累计</button>
+        </div>
       </div>
     </div>
     <div class="tv-stats" id="tvStats"></div>
@@ -190,9 +229,18 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
     <div class="mobile-title">宜都华晟达洲比亚迪 · 宜昌客户分布</div>
     <div class="mobile-subtitle" id="mobileSubtitle">点击地图区域查看详情</div>
   </div>
-  <div class="mobile-month-selector">
-    <label>查询月份：</label>
-    <select id="mobileMonthSelect" onchange="onMonthChange()"></select>
+  <div class="mobile-date-range">
+    <label>查询范围：</label>
+    <input type="text" class="mobile-date-input" id="mobileDateRange" placeholder="选择日期范围" readonly>
+    <div class="mobile-preset-btns" id="mobilePresetBtns">
+      <button class="mobile-preset-btn" data-preset="today">今日</button>
+      <button class="mobile-preset-btn" data-preset="yesterday">昨日</button>
+      <button class="mobile-preset-btn" data-preset="week">一周</button>
+      <button class="mobile-preset-btn" data-preset="month">一月</button>
+      <button class="mobile-preset-btn" data-preset="quarter">三月</button>
+      <button class="mobile-preset-btn" data-preset="year">一年</button>
+      <button class="mobile-preset-btn active" data-preset="all">累计</button>
+    </div>
   </div>
   <div class="mobile-stats" id="mobileStats"></div>
   <div class="mobile-map-container">
@@ -309,6 +357,10 @@ let data = null;
 let isAdmin = false;
 let detectedDevice = 'desktop';
 let currentMonth = 'all';
+let dateRangeStart = null; // YYYY-MM-DD
+let dateRangeEnd = null;   // YYYY-MM-DD
+let activePreset = 'all';
+let tvFlatpickr = null, mobileFlatpickr = null;
 
 const STORAGE_KEY = 'yidu_byd_full_data';
 const UPDATE_KEY = 'yidu_byd_update';
@@ -316,7 +368,7 @@ const ADMIN_KEY = 'yidu_byd_admin';
 const ADMIN_PASSWORD = 'yichang2026';
 const bc = new BroadcastChannel('yidu_byd_full_sync');
 
-// ========== Month Helpers ==========
+// ========== Date Range Helpers ==========
 function getAvailableMonths() {
   if (!data || !data.monthlyData) return ['2026-08'];
   return Object.keys(data.monthlyData).sort();
@@ -337,9 +389,63 @@ function getNextMonth() {
   return y + '-' + String(m).padStart(2, '0');
 }
 
+function getRangeLabel() {
+  if (activePreset === 'all') return '累计（全部）';
+  if (!dateRangeStart || !dateRangeEnd) return '累计（全部）';
+  return dateRangeStart + ' 至 ' + dateRangeEnd;
+}
+
+// Get all months that overlap with the date range
+function getMonthsInRange() {
+  if (activePreset === 'all' || (!dateRangeStart && !dateRangeEnd)) {
+    return getAvailableMonths();
+  }
+  const allMonths = getAvailableMonths();
+  // Parse start/end month strings
+  const startMonth = dateRangeStart.substring(0, 7); // YYYY-MM
+  const endMonth = dateRangeEnd.substring(0, 7);
+  return allMonths.filter(m => m >= startMonth && m <= endMonth);
+}
+
+function getRangeDistrictData() {
+  const result = {};
+  const names = data.districtNames || [];
+  names.forEach(n => { result[n] = { total: 0, vip: 0 }; });
+  const months = getMonthsInRange();
+  months.forEach(m => {
+    const md = data.monthlyData[m];
+    if (md && md.districtData) {
+      Object.entries(md.districtData).forEach(([name, d]) => {
+        if (!result[name]) result[name] = { total: 0, vip: 0 };
+        result[name].total += d.total || 0;
+        result[name].vip += d.vip || 0;
+      });
+    }
+  });
+  return result;
+}
+
+function getRangeStreetData(district) {
+  const result = {};
+  const streets = (data.streetsByDistrict || {})[district] || [];
+  streets.forEach(s => { result[s] = { total: 0, vip: 0 }; });
+  const months = getMonthsInRange();
+  months.forEach(m => {
+    const md = data.monthlyData[m];
+    if (md && md.streetData && md.streetData[district]) {
+      Object.entries(md.streetData[district]).forEach(([s, d]) => {
+        if (!result[s]) result[s] = { total: 0, vip: 0 };
+        result[s].total += d.total || 0;
+        result[s].vip += d.vip || 0;
+      });
+    }
+  });
+  return result;
+}
+
+// Keep old function names as aliases for backward compatibility in upload view
 function getMonthDistrictData(month) {
   if (month === 'all') {
-    // Cumulative across all months
     const result = {};
     const names = data.districtNames || [];
     names.forEach(n => { result[n] = { total: 0, vip: 0 }; });
@@ -377,6 +483,116 @@ function getMonthStreetData(month, district) {
   const md = data.monthlyData[month];
   if (!md || !md.streetData) return {};
   return md.streetData[district] || {};
+}
+
+// ========== Preset Handlers ==========
+function applyPreset(preset) {
+  activePreset = preset;
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  
+  if (preset === 'all') {
+    dateRangeStart = null;
+    dateRangeEnd = null;
+  } else if (preset === 'today') {
+    dateRangeStart = todayStr;
+    dateRangeEnd = todayStr;
+  } else if (preset === 'yesterday') {
+    const y = new Date(now); y.setDate(y.getDate() - 1);
+    dateRangeStart = y.toISOString().split('T')[0];
+    dateRangeEnd = dateRangeStart;
+  } else if (preset === 'week') {
+    const w = new Date(now); w.setDate(w.getDate() - 6);
+    dateRangeStart = w.toISOString().split('T')[0];
+    dateRangeEnd = todayStr;
+  } else if (preset === 'month') {
+    const m = new Date(now); m.setDate(m.getDate() - 29);
+    dateRangeStart = m.toISOString().split('T')[0];
+    dateRangeEnd = todayStr;
+  } else if (preset === 'quarter') {
+    const q = new Date(now); q.setDate(q.getDate() - 89);
+    dateRangeStart = q.toISOString().split('T')[0];
+    dateRangeEnd = todayStr;
+  } else if (preset === 'year') {
+    const yr = new Date(now); yr.setDate(yr.getDate() - 364);
+    dateRangeStart = yr.toISOString().split('T')[0];
+    dateRangeEnd = todayStr;
+  }
+  
+  // Update flatpickr displays
+  if (tvFlatpickr) {
+    if (dateRangeStart && dateRangeEnd) {
+      tvFlatpickr.setDate([dateRangeStart, dateRangeEnd]);
+    } else {
+      tvFlatpickr.clear();
+    }
+  }
+  if (mobileFlatpickr) {
+    if (dateRangeStart && dateRangeEnd) {
+      mobileFlatpickr.setDate([dateRangeStart, dateRangeEnd]);
+    } else {
+      mobileFlatpickr.clear();
+    }
+  }
+  
+  // Update active button styles
+  document.querySelectorAll('.preset-btn, .mobile-preset-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.preset === preset);
+  });
+  
+  refreshCurrentView();
+}
+
+function initDateRangePickers() {
+  // TV date range picker
+  const tvInput = document.getElementById('tvDateRange');
+  if (tvInput && !tvFlatpickr) {
+    tvFlatpickr = flatpickr(tvInput, {
+      mode: 'range',
+      locale: 'zh',
+      dateFormat: 'Y-m-d',
+      showMonths: 2,
+      minDate: '2026-08-01',
+      onChange: function(selected, dateStr) {
+        if (selected.length === 2) {
+          dateRangeStart = selected[0].toISOString().split('T')[0];
+          dateRangeEnd = selected[1].toISOString().split('T')[0];
+          activePreset = 'custom';
+          document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+          refreshCurrentView();
+        }
+      }
+    });
+  }
+  
+  // Mobile date range picker
+  const mobileInput = document.getElementById('mobileDateRange');
+  if (mobileInput && !mobileFlatpickr) {
+    mobileFlatpickr = flatpickr(mobileInput, {
+      mode: 'range',
+      locale: 'zh',
+      dateFormat: 'Y-m-d',
+      showMonths: 1,
+      minDate: '2026-08-01',
+      onChange: function(selected, dateStr) {
+        if (selected.length === 2) {
+          dateRangeStart = selected[0].toISOString().split('T')[0];
+          dateRangeEnd = selected[1].toISOString().split('T')[0];
+          activePreset = 'custom';
+          document.querySelectorAll('.mobile-preset-btn').forEach(b => b.classList.remove('active'));
+          refreshCurrentView();
+        }
+      }
+    });
+  }
+  
+  // Preset button handlers
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', function() { applyPreset(this.dataset.preset); });
+  });
+  document.querySelectorAll('.mobile-preset-btn').forEach(btn => {
+    btn.addEventListener('click', function() { applyPreset(this.dataset.preset); });
+  });
 }
 
 // ========== Device Detection ==========
@@ -536,18 +752,16 @@ function getColorForValue(val, max) {
 
 // ========== Month Selectors ==========
 function refreshMonthSelectors() {
-  const months = getAvailableMonths();
-  const opts = ['<option value="all">累计（全部月份）</option>'];
-  months.forEach(m => opts.push(`<option value="${m}" ${m === currentMonth ? 'selected' : ''}>${getMonthLabel(m)}</option>`));
-  const tv = document.getElementById('tvMonthSelect'), mb = document.getElementById('mobileMonthSelect'), up = document.getElementById('uploadMonthSelect');
-  if (tv) { tv.innerHTML = opts.join(''); tv.value = currentMonth; }
-  if (mb) { mb.innerHTML = opts.join(''); mb.value = currentMonth; }
-  if (up) { up.innerHTML = months.map(m => `<option value="${m}">${getMonthLabel(m)}</option>`).join(''); }
+  // Only refresh upload month selector now (TV/Mobile use date range picker)
+  const up = document.getElementById('uploadMonthSelect');
+  if (up) {
+    const months = getAvailableMonths();
+    up.innerHTML = months.map(m => `<option value="${m}">${getMonthLabel(m)}</option>`).join('');
+  }
 }
 
 function onMonthChange() {
-  const tv = document.getElementById('tvMonthSelect'), mb = document.getElementById('mobileMonthSelect');
-  currentMonth = (tv && tvView.style.display !== 'none') ? tv.value : (mb ? mb.value : 'all');
+  // No longer used by TV/Mobile - kept for compatibility
   refreshCurrentView();
 }
 
@@ -563,13 +777,13 @@ function initTV() {
 }
 
 function renderTVOverview() {
-  const dd = getMonthDistrictData(currentMonth);
+  const dd = getRangeDistrictData();
   const names = data.districtNames || [];
   const districts = names.map(name => ({ name, value: (dd[name]||{}).total||0, vip: (dd[name]||{}).vip||0 }));
   const grandTotal = districts.reduce((s,d) => s+d.value, 0);
   const grandVIP = districts.reduce((s,d) => s+d.vip, 0);
 
-  document.getElementById('tvMapTitle').textContent = '宜昌市客户分布 - ' + getMonthLabel(currentMonth);
+  document.getElementById('tvMapTitle').textContent = '宜昌市客户分布 - ' + getRangeLabel();
   document.getElementById('tvStats').innerHTML = `
     <div class="tv-stat-card"><div class="label">客户总数</div><div class="value accent">${grandTotal.toLocaleString()}</div></div>
     <div class="tv-stat-card"><div class="label">VIP客户</div><div class="value success">${grandVIP.toLocaleString()}</div></div>
@@ -610,7 +824,7 @@ function renderTVOverview() {
 
 function drillToDistrict(districtName) {
   currentDrillDistrict = districtName;
-  document.getElementById('tvMapTitle').textContent = '客户分布 - ' + districtName + ' - ' + getMonthLabel(currentMonth);
+  document.getElementById('tvMapTitle').textContent = '客户分布 - ' + districtName + ' - ' + getRangeLabel();
   document.getElementById('tvBackBtn').style.display = 'inline-block';
 
   const streetGeo = data.streetsGeo[districtName];
@@ -618,7 +832,7 @@ function drillToDistrict(districtName) {
   const mapName = 'street_' + districtName;
   echarts.registerMap(mapName, streetGeo);
 
-  const sd = getMonthStreetData(currentMonth, districtName);
+  const sd = getRangeStreetData(districtName);
   const streets = streetGeo.features.map(f => {
     const sName = f.properties.name;
     const s = sd[sName] || {total:0, vip:0};
@@ -655,14 +869,14 @@ function drillToDistrict(districtName) {
 
 function backToOverview() {
   currentDrillDistrict = null;
-  document.getElementById('tvMapTitle').textContent = '宜昌市客户分布 - ' + getMonthLabel(currentMonth);
+  document.getElementById('tvMapTitle').textContent = '宜昌市客户分布 - ' + getRangeLabel();
   document.getElementById('tvBackBtn').style.display = 'none';
   renderTVOverview();
   renderTVRankList();
 }
 
 function renderTVRankList() {
-  const dd = getMonthDistrictData(currentMonth);
+  const dd = getRangeDistrictData();
   const names = data.districtNames || [];
   const districts = names.map(name => ({ name, total: (dd[name]||{}).total||0, vip: (dd[name]||{}).vip||0 })).sort((a,b) => b.total - a.total);
   const maxVal = Math.max(...districts.map(d=>d.total), 1);
@@ -678,13 +892,13 @@ function renderTVRankList() {
       <span class="val">${d.total}</span>
     </div></div>`;
   });
-  document.getElementById('tvPanel').innerHTML = `<div class="tv-panel-title">各区县客户排名 - ${getMonthLabel(currentMonth)}</div>${html}`;
+  document.getElementById('tvPanel').innerHTML = `<div class="tv-panel-title">各区县客户排名 - ${getRangeLabel()}</div>${html}`;
 }
 
 function renderTVDetailPanel(districtName) {
-  const dd = getMonthDistrictData(currentMonth);
+  const dd = getRangeDistrictData();
   const dInfo = dd[districtName] || {total:0, vip:0};
-  const sd = getMonthStreetData(currentMonth, districtName);
+  const sd = getRangeStreetData(districtName);
   const streets = Object.entries(sd).map(([name,d]) => ({name, total:d.total, vip:d.vip})).sort((a,b) => b.total-a.total);
   const rate = dInfo.total > 0 ? (dInfo.vip/dInfo.total*100).toFixed(1) : '0.0';
 
@@ -709,7 +923,7 @@ function renderTVDetailPanel(districtName) {
         <div class="tv-detail-stat"><div class="label">VIP占比</div><div class="value" style="color:#f59e0b">${rate}%</div></div>
       </div>
       <div style="margin-top:16px">
-        <div style="font-size:14px;font-weight:600;margin-bottom:8px;color:#e0e7ff">街道客户分布 TOP10 - ${getMonthLabel(currentMonth)}</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:8px;color:#e0e7ff">街道客户分布 TOP10 - ${getRangeLabel()}</div>
         ${streetHtml || '<div style="color:#6b7280;font-size:13px;">暂无街道数据</div>'}
       </div>
     </div>
@@ -724,7 +938,7 @@ function initMobile() {
   }
   echarts.registerMap('yichang', data.districtGeo);
 
-  const dd = getMonthDistrictData(currentMonth);
+  const dd = getRangeDistrictData();
   const names = data.districtNames || [];
   const districts = names.map(name => ({ name, total: (dd[name]||{}).total||0, vip: (dd[name]||{}).vip||0 }));
   const grandTotal = districts.reduce((s,d) => s+d.total, 0);
@@ -735,7 +949,7 @@ function initMobile() {
     <div class="mobile-stat-card"><div class="label">VIP客户</div><div class="value" style="color:#10b981">${grandVIP.toLocaleString()}</div></div>
     <div class="mobile-stat-card"><div class="label">VIP占比</div><div class="value" style="color:#f59e0b">${grandTotal>0?(grandVIP/grandTotal*100).toFixed(1):'0.0'}%</div></div>
   `;
-  document.getElementById('mobileMapTitle').textContent = '宜昌市客户分布 - ' + getMonthLabel(currentMonth);
+  document.getElementById('mobileMapTitle').textContent = '宜昌市客户分布 - ' + getRangeLabel();
 
   const maxVal = Math.max(...districts.map(d=>d.total), 1);
   const seriesData = districts.map(d => ({
@@ -764,12 +978,12 @@ function initMobile() {
 }
 
 function renderMobileRankList() {
-  const dd = getMonthDistrictData(currentMonth);
+  const dd = getRangeDistrictData();
   const names = data.districtNames || [];
   const districts = names.map(name => ({ name, total: (dd[name]||{}).total||0, vip: (dd[name]||{}).vip||0 })).sort((a,b) => b.total-a.total);
   const maxTotal = Math.max(...districts.map(d=>d.total), 1);
 
-  document.getElementById('mobilePanelTitle').textContent = '各区县客户排名 - ' + getMonthLabel(currentMonth);
+  document.getElementById('mobilePanelTitle').textContent = '各区县客户排名 - ' + getRangeLabel();
   document.getElementById('mobileRankList').innerHTML = districts.map((d,i) => {
     const barW = (d.total/maxTotal*100).toFixed(1);
     const vipPct = d.total>0?(d.vip/d.total*100).toFixed(1):'0.0';
@@ -789,13 +1003,13 @@ function renderMobileRankList() {
 
 function showMobileDetail(districtName) {
   const streetGeo = data.streetsGeo[districtName];
-  document.getElementById('mobileMapTitle').textContent = '客户分布 - ' + districtName + ' - ' + getMonthLabel(currentMonth);
+  document.getElementById('mobileMapTitle').textContent = '客户分布 - ' + districtName + ' - ' + getRangeLabel();
   document.getElementById('mobileBackBtn').style.display = 'inline-block';
 
   if (streetGeo) {
     const mapName = 'street_' + districtName;
     echarts.registerMap(mapName, streetGeo);
-    const sd = getMonthStreetData(currentMonth, districtName);
+    const sd = getRangeStreetData(districtName);
     const streets = streetGeo.features.map(f => {
       const sName = f.properties.name;
       const s = sd[sName] || {total:0, vip:0};
@@ -815,13 +1029,13 @@ function showMobileDetail(districtName) {
     }, true);
   }
 
-  const dd = getMonthDistrictData(currentMonth);
+  const dd = getRangeDistrictData();
   const dInfo = dd[districtName] || {total:0, vip:0};
-  const sd = getMonthStreetData(currentMonth, districtName);
+  const sd = getRangeStreetData(districtName);
   const streetList = Object.entries(sd).map(([name,d]) => ({name, total:d.total, vip:d.vip})).sort((a,b) => b.total-a.total);
   const rate = dInfo.total>0?(dInfo.vip/dInfo.total*100).toFixed(1):'0.0';
 
-  document.getElementById('mobilePanelTitle').textContent = districtName + ' - 街道详情 - ' + getMonthLabel(currentMonth);
+  document.getElementById('mobilePanelTitle').textContent = districtName + ' - 街道详情 - ' + getRangeLabel();
   document.getElementById('mobileRankList').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
       <div class="mobile-detail-stat" style="background:var(--mobile-bg);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:10px;color:var(--mobile-dim);">客户总数</div><div style="font-size:16px;font-weight:700;color:#3b82f6">${dInfo.total}</div></div>
@@ -834,7 +1048,7 @@ function showMobileDetail(districtName) {
 }
 
 function mobileBackToOverview() {
-  document.getElementById('mobileMapTitle').textContent = '宜昌市客户分布 - ' + getMonthLabel(currentMonth);
+  document.getElementById('mobileMapTitle').textContent = '宜昌市客户分布 - ' + getRangeLabel();
   document.getElementById('mobileBackBtn').style.display = 'none';
   initMobile();
 }
@@ -1052,12 +1266,12 @@ function switchView(view) {
     document.getElementById('tvView').style.display = 'none';
     document.getElementById('mobileView').style.display = 'block';
     document.getElementById('uploadView').style.display = 'none';
-    setTimeout(initMobile, 100);
+    setTimeout(() => { initDateRangePickers(); initMobile(); }, 100);
   } else {
     document.getElementById('tvView').style.display = 'block';
     document.getElementById('mobileView').style.display = 'none';
     document.getElementById('uploadView').style.display = 'none';
-    setTimeout(initTV, 100);
+    setTimeout(() => { initDateRangePickers(); initTV(); }, 100);
   }
 }
 
