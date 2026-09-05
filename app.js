@@ -1370,6 +1370,192 @@ function addNewMonth() {
   showToast('已新增 ' + getMonthLabel(next));
 }
 
+// ========== Customer Search & Edit ==========
+let editingMonth = null;
+let editingIndex = -1;
+
+function searchExistingCustomer() {
+  const keyword = (document.getElementById('customerSearchInput')?.value || '').trim();
+  const resultsDiv = document.getElementById('searchResults');
+  if (!resultsDiv) return;
+
+  if (!keyword) {
+    resultsDiv.innerHTML = '';
+    return;
+  }
+
+  // Search across ALL months
+  const matches = [];
+  for (const [month, items] of Object.entries(data.addressDetails || {})) {
+    if (!Array.isArray(items)) continue;
+    items.forEach((item, i) => {
+      if (item.name && item.name.includes(keyword)) {
+        matches.push({ ...item, month, index: i });
+      }
+    });
+  }
+
+  if (matches.length === 0) {
+    resultsDiv.innerHTML = '<div style="text-align:center;color:#9ca3af;font-size:13px;padding:12px;">未找到匹配的客户</div>';
+    return;
+  }
+
+  resultsDiv.innerHTML = matches.map(m => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:6px;cursor:pointer;background:#f9fafb;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#f9fafb'" onclick="editAddressItem('${m.month}', ${m.index})">
+      <div>
+        <span style="font-weight:600;color:#1f2937;">${m.name}</span>
+        <span style="color:#6b7280;font-size:12px;margin-left:8px;">${m.district} · ${m.street} · ${m.detail || ''}</span>
+        ${m.vip === 1 ? '<span style="font-size:10px;color:#10b981;font-weight:700;border:1px solid rgba(16,185,129,0.3);border-radius:4px;padding:1px 6px;margin-left:6px;">VIP</span>' : ''}
+        <span style="font-size:11px;color:#9ca3af;margin-left:6px;">${m.month.replace('-', '年')}月</span>
+      </div>
+      <span style="color:#3b82f6;font-size:13px;">编辑 →</span>
+    </div>
+  `).join('');
+}
+
+function editAddressItem(month, index) {
+  const items = data.addressDetails[month] || [];
+  if (index < 0 || index >= items.length) return;
+  const item = items[index];
+
+  // Populate form
+  document.getElementById('addrDistrict').value = item.district || '';
+  onAddrDistrictChange();
+  document.getElementById('addrStreet').value = item.street || '';
+  document.getElementById('addrDetail').value = item.detail || '';
+  document.getElementById('addrName').value = item.name || '';
+  document.getElementById('addrVip').value = item.vip || 0;
+
+  // Set edit mode
+  editingMonth = month;
+  editingIndex = index;
+
+  // Update button text
+  const addBtn = document.querySelector('button[onclick="addAddressItem()"]');
+  if (addBtn) {
+    addBtn.textContent = '更新';
+    addBtn.setAttribute('onclick', 'updateAddressItem()');
+    addBtn.style.background = '#f59e0b';
+  }
+
+  // Add cancel button if not exists
+  if (!document.getElementById('cancelEditBtn')) {
+    const cancelBtn = document.createElement('button');
+    cancelBtn.id = 'cancelEditBtn';
+    cancelBtn.className = 'btn-secondary';
+    cancelBtn.style.cssText = 'padding:8px 16px;font-size:13px;margin-left:8px;';
+    cancelBtn.textContent = '取消编辑';
+    cancelBtn.onclick = cancelEdit;
+    addBtn.parentNode.appendChild(cancelBtn);
+  }
+
+  // Switch to the month being edited
+  if (month !== getCurrentMonth()) {
+    // Show a note that we're editing from a different month
+    showToast(`正在编辑 ${month.replace('-', '年')}月 的客户信息`);
+  }
+
+  // Clear search results
+  document.getElementById('customerSearchInput').value = '';
+  document.getElementById('searchResults').innerHTML = '';
+
+  // Scroll to form
+  document.querySelector('.address-input-row').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function updateAddressItem() {
+  if (editingMonth === null || editingIndex < 0) {
+    addAddressItem();
+    return;
+  }
+
+  const dist = document.getElementById('addrDistrict').value;
+  const street = document.getElementById('addrStreet').value;
+  const detail = document.getElementById('addrDetail').value.trim();
+  const name = document.getElementById('addrName').value.trim();
+  const vip = parseInt(document.getElementById('addrVip').value);
+
+  if (!dist) { showToast('请选择区县'); return; }
+  if (!street) { showToast('请选择街道/乡镇'); return; }
+  if (!detail) { showToast('请输入客户地址'); return; }
+
+  const items = data.addressDetails[editingMonth] || [];
+  if (editingIndex >= items.length) { showToast('客户记录不存在，请重新搜索'); cancelEdit(); return; }
+
+  const oldItem = items[editingIndex];
+  const oldVip = oldItem.vip;
+  const oldDist = oldItem.district;
+  const oldStreet = oldItem.street;
+
+  // Update the item
+  items[editingIndex] = { district: dist, street, detail, name, vip };
+
+  // If district/street changed, recalculate the entire month's data
+  if (oldDist !== dist || oldStreet !== street) {
+    recalculateMonth(editingMonth);
+  } else if (oldVip !== vip) {
+    // Only VIP changed, adjust counts
+    if (data.monthlyData[editingMonth] && data.monthlyData[editingMonth].districtData[dist]) {
+      data.monthlyData[editingMonth].districtData[dist].vip += (vip === 1 ? 1 : -1);
+    }
+    if (data.monthlyData[editingMonth] && data.monthlyData[editingMonth].streetData[dist] && data.monthlyData[editingMonth].streetData[dist][street]) {
+      data.monthlyData[editingMonth].streetData[dist][street].vip += (vip === 1 ? 1 : -1);
+    }
+  }
+
+  // Exit edit mode
+  cancelEdit();
+
+  // Refresh the view
+  onUploadMonthChange();
+  showToast('客户信息已更新');
+}
+
+function cancelEdit() {
+  editingMonth = null;
+  editingIndex = -1;
+
+  // Reset button
+  const updateBtn = document.querySelector('button[onclick="updateAddressItem()"]');
+  if (updateBtn) {
+    updateBtn.textContent = '添加';
+    updateBtn.setAttribute('onclick', 'addAddressItem()');
+    updateBtn.style.background = '';
+  }
+
+  // Remove cancel button
+  const cancelBtn = document.getElementById('cancelEditBtn');
+  if (cancelBtn) cancelBtn.remove();
+
+  // Clear form
+  document.getElementById('addrDetail').value = '';
+  document.getElementById('addrName').value = '';
+  document.getElementById('addrVip').value = '0';
+}
+
+function recalculateMonth(month) {
+  if (!data.monthlyData[month]) return;
+  const items = data.addressDetails[month] || [];
+  const names = data.districtNames || [];
+  names.forEach(d => {
+    data.monthlyData[month].districtData[d] = { total: 0, vip: 0 };
+    if (!data.monthlyData[month].streetData[d]) data.monthlyData[month].streetData[d] = {};
+    (data.streetsByDistrict[d] || []).forEach(s => {
+      data.monthlyData[month].streetData[d][s] = { total: 0, vip: 0 };
+    });
+  });
+  if (!data.monthlyData[month].districtData['其他']) data.monthlyData[month].districtData['其他'] = { total: 0, vip: 0 };
+  items.forEach(item => {
+    if (!data.monthlyData[month].districtData[item.district]) data.monthlyData[month].districtData[item.district] = { total: 0, vip: 0 };
+    data.monthlyData[month].districtData[item.district].total++;
+    if (item.vip === 1) data.monthlyData[month].districtData[item.district].vip++;
+    if (!data.monthlyData[month].streetData[item.district]) data.monthlyData[month].streetData[item.district] = {};
+    if (!data.monthlyData[month].streetData[item.district][item.street]) data.monthlyData[month].streetData[item.district][item.street] = { total: 0, vip: 0 };
+    data.monthlyData[month].streetData[item.district][item.street].total++;
+    if (item.vip === 1) data.monthlyData[month].streetData[item.district][item.street].vip++;
+  });
+}
+
 function addAddressItem() {
   const dist = document.getElementById('addrDistrict').value;
   const street = document.getElementById('addrStreet').value;
@@ -1413,7 +1599,10 @@ function renderAddressList(month) {
   list.innerHTML = items.map((item, i) => `
     <div class="address-item">
       <span><b>${item.district}</b> · ${item.street} · ${item.detail}${item.name ? ' · ' + item.name : ''} ${item.vip === 1 ? '<span style="color:#10b981">VIP</span>' : ''}</span>
-      <button class="del-btn" onclick="removeAddressItem(${i})">删除</button>
+      <div style="display:flex;gap:6px;">
+        <button class="del-btn" style="color:#f59e0b;" onclick="editAddressItem('${month}', ${i})">编辑</button>
+        <button class="del-btn" onclick="removeAddressItem(${i})">删除</button>
+      </div>
     </div>
   `).join('');
 }
