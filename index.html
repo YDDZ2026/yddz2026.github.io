@@ -7,11 +7,12 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preload" href="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" as="script" crossorigin>
 <link rel="preload" href="map-data.js?v=20260905a" as="script">
-<link rel="preload" href="app.js?v=20260905j" as="script">
+<link rel="preload" href="app.js?v=20260905k" as="script">
 <link rel="preload" href="data.json" as="fetch" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script defer src="map-data.js?v=20260905a"></script>
-<script defer src="app.js?v=20260905j"></script>
+<script defer src="app.js?v=20260905k"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
@@ -542,6 +543,19 @@ setTimeout(function(){
       <button class="btn-secondary" style="padding:10px 20px;font-size:13px;" onclick="searchExistingCustomer()">搜索</button>
     </div>
     <div id="searchResults" style="margin-top:10px;max-height:300px;overflow-y:auto;"></div>
+  </div>
+
+  <!-- Excel Batch Import -->
+  <div style="margin-top:20px;padding:16px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;">
+    <div style="font-size:14px;font-weight:600;margin-bottom:6px;color:#1f2937;">📊 Excel批量导入</div>
+    <div style="font-size:11px;color:#6b7280;margin-bottom:12px;">下载模板填写客户信息，一次导入多条记录，大幅提升录入效率</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+      <button class="btn-secondary" style="padding:10px 20px;font-size:13px;" onclick="downloadExcelTemplate()">📥 下载模板</button>
+      <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleExcelUpload(event)">
+      <button class="btn-primary" style="padding:10px 20px;font-size:13px;" onclick="document.getElementById('excelFileInput').click()">📁 选择Excel文件</button>
+    </div>
+    <div id="importStatus" style="font-size:13px;color:#6b7280;"></div>
+    <div id="importPreview" style="margin-top:12px;display:none;"></div>
   </div>
 
   <div class="upload-actions">

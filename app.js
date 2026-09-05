@@ -1636,6 +1636,297 @@ function addAddressItem() {
   showToast('已添加客户地址，请点击"提交数据"同步到云端');
 }
 
+// ========== Excel Batch Import ==========
+function downloadExcelTemplate() {
+  if (typeof XLSX === 'undefined') { showToast('Excel库加载中，请稍后重试'); return; }
+
+  const districts = data.districtNames || [];
+  const streetsByDistrict = data.streetsByDistrict || {};
+
+  // Build a second sheet listing all valid districts/streets as reference
+  const refRows = [];
+  refRows.push(['区县', '可选街道/乡镇']);
+  districts.forEach(d => {
+    const streets = (streetsByDistrict[d] || []).join('、');
+    refRows.push([d, streets]);
+  });
+
+  // Main sheet: template headers + 2 sample rows
+  const tplRows = [
+    ['区县', '街道/乡镇', '详细地址', '客户姓名', '是否VIP'],
+    ['宜都市', '陆城街道', '清江大道168号', '张三', '是'],
+    ['宜都市', '枝城镇', '城坡大道99号', '李四', '否']
+  ];
+
+  const wb = XLSX.utils.book_new();
+  const wsTpl = XLSX.utils.aoa_to_sheet(tplRows);
+  wsTpl['!cols'] = [{ wch: 16 }, { wch: 18 }, { wch: 30 }, { wch: 12 }, { wch: 10 }];
+  // Add data validation comment on header row
+  if (!wsTpl['A1'].c) wsTpl['A1'].c = [];
+  wsTpl['A1'].c.push({ a: '系统', t: '请填写13个区县之一，参考"区县街道参考表"' });
+  XLSX.utils.book_append_sheet(wb, wsTpl, '客户信息模板');
+
+  const wsRef = XLSX.utils.aoa_to_sheet(refRows);
+  wsRef['!cols'] = [{ wch: 18 }, { wch: 80 }];
+  XLSX.utils.book_append_sheet(wb, wsRef, '区县街道参考表');
+
+  XLSX.writeFile(wb, '客户信息导入模板.xlsx');
+  showToast('模板已下载，请按格式填写后上传');
+}
+
+function handleExcelUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (typeof XLSX === 'undefined') { showToast('Excel库加载中，请稍后重试'); return; }
+
+  const statusEl = document.getElementById('importStatus');
+  const previewEl = document.getElementById('importPreview');
+  statusEl.textContent = '正在解析文件...';
+  statusEl.style.color = '#3b82f6';
+  previewEl.style.display = 'none';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      processExcelRows(rows);
+    } catch (err) {
+      statusEl.textContent = '❌ 文件解析失败：' + err.message;
+      statusEl.style.color = '#ef4444';
+    }
+  };
+  reader.onerror = function() {
+    statusEl.textContent = '❌ 文件读取失败';
+    statusEl.style.color = '#ef4444';
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value = ''; // reset so same file can be re-selected
+}
+
+function processExcelRows(rows) {
+  const statusEl = document.getElementById('importStatus');
+  const previewEl = document.getElementById('importPreview');
+
+  if (rows.length < 2) {
+    statusEl.textContent = '❌ 文件为空或只有表头，请填写客户数据后再上传';
+    statusEl.style.color = '#ef4444';
+    return;
+  }
+
+  // Detect header row (first row should contain "区县" or similar)
+  let headerRow = rows[0].map(c => String(c).trim());
+  let dataStart = 1;
+
+  // If first row doesn't look like header, treat all as data
+  if (!headerRow.some(h => h.includes('区县') || h.includes('街道') || h.includes('地址'))) {
+    headerRow = ['区县', '街道/乡镇', '详细地址', '客户姓名', '是否VIP'];
+    dataStart = 0;
+  }
+
+  // Map column indices
+  const colMap = {};
+  headerRow.forEach((h, i) => {
+    if (h.includes('区县') || h.includes('区')) colMap.district = i;
+    else if (h.includes('街道') || h.includes('乡镇') || h.includes('街道/乡镇')) colMap.street = i;
+    else if (h.includes('详细地址') || h.includes('地址')) colMap.detail = i;
+    else if (h.includes('姓名') || h.includes('客户')) colMap.name = i;
+    else if (h.includes('VIP') || h.includes('vip') || h.includes('是否')) colMap.vip = i;
+  });
+
+  // Defaults if not found
+  if (colMap.district === undefined) colMap.district = 0;
+  if (colMap.street === undefined) colMap.street = 1;
+  if (colMap.detail === undefined) colMap.detail = 2;
+  if (colMap.name === undefined) colMap.name = 3;
+  if (colMap.vip === undefined) colMap.vip = 4;
+
+  const districts = data.districtNames || [];
+  const streetsByDistrict = data.streetsByDistrict || {};
+  const validRows = [];
+  const invalidRows = [];
+
+  for (let i = dataStart; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.length === 0) continue;
+    // Skip completely empty rows
+    const hasData = row.some(c => String(c).trim() !== '');
+    if (!hasData) continue;
+
+    const district = String(row[colMap.district] || '').trim();
+    const street = String(row[colMap.street] || '').trim();
+    const detail = String(row[colMap.detail] || '').trim();
+    const name = String(row[colMap.name] || '').trim();
+    const vipRaw = String(row[colMap.vip] || '').trim().toLowerCase();
+
+    const errors = [];
+    if (!district) errors.push('区县为空');
+    else if (!districts.includes(district)) errors.push(`区县"${district}"不在可选范围`);
+
+    if (!street) errors.push('街道为空');
+    else if (district && streetsByDistrict[district] && !streetsByDistrict[district].includes(street)) {
+      errors.push(`街道"${street}"不属于${district}`);
+    }
+
+    if (!detail) errors.push('详细地址为空');
+
+    let vip = 0;
+    if (vipRaw === '是' || vipRaw === '1' || vipRaw === 'true' || vipRaw === 'vip') vip = 1;
+
+    if (errors.length > 0) {
+      invalidRows.push({ row: i + 1, district, street, detail, name, vip, errors });
+    } else {
+      validRows.push({ district, street, detail, name, vip });
+    }
+  }
+
+  showImportPreview(validRows, invalidRows);
+}
+
+function showImportPreview(validRows, invalidRows) {
+  const statusEl = document.getElementById('importStatus');
+  const previewEl = document.getElementById('importPreview');
+
+  const total = validRows.length + invalidRows.length;
+  if (total === 0) {
+    statusEl.textContent = '❌ 未检测到任何有效数据行';
+    statusEl.style.color = '#ef4444';
+    previewEl.style.display = 'none';
+    return;
+  }
+
+  statusEl.textContent = `解析完成：✅ ${validRows.length} 条有效，❌ ${invalidRows.length} 条无效（共 ${total} 条）`;
+  statusEl.style.color = validRows.length > 0 ? '#10b981' : '#ef4444';
+
+  let html = '';
+
+  if (validRows.length > 0) {
+    html += `<div style="margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:600;color:#10b981;margin-bottom:6px;">✅ 有效数据预览（前5条）</div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead><tr style="background:#f0fdf4;">
+            <th style="border:1px solid #d1d5db;padding:6px;text-align:left;">区县</th>
+            <th style="border:1px solid #d1d5db;padding:6px;text-align:left;">街道</th>
+            <th style="border:1px solid #d1d5db;padding:6px;text-align:left;">详细地址</th>
+            <th style="border:1px solid #d1d5db;padding:6px;text-align:left;">姓名</th>
+            <th style="border:1px solid #d1d5db;padding:6px;text-align:left;">VIP</th>
+          </tr></thead>
+          <tbody>
+            ${validRows.slice(0, 5).map(r => `
+              <tr>
+                <td style="border:1px solid #d1d5db;padding:6px;">${r.district}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;">${r.street}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;">${r.detail}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;">${r.name || '-'}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;">${r.vip === 1 ? '是' : '否'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      ${validRows.length > 5 ? `<div style="font-size:11px;color:#6b7280;margin-top:4px;">...还有 ${validRows.length - 5} 条数据未显示</div>` : ''}
+    </div>`;
+  }
+
+  if (invalidRows.length > 0) {
+    html += `<div style="margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:600;color:#ef4444;margin-bottom:6px;">❌ 无效数据（前5条）</div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead><tr style="background:#fef2f2;">
+            <th style="border:1px solid #d1d5db;padding:6px;">行号</th>
+            <th style="border:1px solid #d1d5db;padding:6px;text-align:left;">区县</th>
+            <th style="border:1px solid #d1d5db;padding:6px;text-align:left;">街道</th>
+            <th style="border:1px solid #d1d5db;padding:6px;text-align:left;">地址</th>
+            <th style="border:1px solid #d1d5db;padding:6px;text-align:left;">错误原因</th>
+          </tr></thead>
+          <tbody>
+            ${invalidRows.slice(0, 5).map(r => `
+              <tr>
+                <td style="border:1px solid #d1d5db;padding:6px;">${r.row}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;">${r.district || '-'}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;">${r.street || '-'}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;">${r.detail || '-'}</td>
+                <td style="border:1px solid #d1d5db;padding:6px;color:#ef4444;">${r.errors.join('；')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      ${invalidRows.length > 5 ? `<div style="font-size:11px;color:#6b7280;margin-top:4px;">...还有 ${invalidRows.length - 5} 条错误未显示</div>` : ''}
+    </div>`;
+  }
+
+  if (validRows.length > 0) {
+    html += `<div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn-primary" style="padding:10px 28px;font-size:14px;" onclick="confirmExcelImport(${validRows.length})">✅ 确认导入 ${validRows.length} 条</button>
+      <button class="btn-secondary" style="padding:10px 20px;font-size:14px;" onclick="cancelExcelImport()">取消</button>
+    </div>`;
+  }
+
+  // Store valid rows for confirmation
+  window._pendingExcelImport = validRows;
+  previewEl.innerHTML = html;
+  previewEl.style.display = 'block';
+}
+
+function confirmExcelImport(count) {
+  const rows = window._pendingExcelImport || [];
+  if (rows.length === 0) { showToast('没有可导入的数据'); return; }
+
+  const month = getCurrentMonth();
+  if (!data.addressDetails[month]) data.addressDetails[month] = [];
+  if (!data.monthlyData[month]) data.monthlyData[month] = { districtData: {}, streetData: {} };
+
+  let imported = 0;
+  rows.forEach(row => {
+    data.addressDetails[month].push({
+      district: row.district,
+      street: row.street,
+      detail: row.detail,
+      name: row.name,
+      vip: row.vip
+    });
+
+    // Update counts
+    if (!data.monthlyData[month].districtData[row.district]) data.monthlyData[month].districtData[row.district] = { total: 0, vip: 0 };
+    if (!data.monthlyData[month].streetData[row.district]) data.monthlyData[month].streetData[row.district] = {};
+    if (!data.monthlyData[month].streetData[row.district][row.street]) data.monthlyData[month].streetData[row.district][row.street] = { total: 0, vip: 0 };
+
+    data.monthlyData[month].districtData[row.district].total++;
+    if (row.vip === 1) data.monthlyData[month].districtData[row.district].vip++;
+    data.monthlyData[month].streetData[row.district][row.street].total++;
+    if (row.vip === 1) data.monthlyData[month].streetData[row.district][row.street].vip++;
+
+    imported++;
+  });
+
+  // Save to localStorage
+  const slimData = { monthlyData: data.monthlyData, addressDetails: data.addressDetails || {} };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(slimData));
+  onUploadMonthChange();
+
+  // Reset UI
+  const statusEl = document.getElementById('importStatus');
+  const previewEl = document.getElementById('importPreview');
+  statusEl.textContent = `✅ 成功导入 ${imported} 条客户数据！请点击"提交数据"同步到云端`;
+  statusEl.style.color = '#10b981';
+  previewEl.style.display = 'none';
+  window._pendingExcelImport = null;
+
+  showToast(`成功导入 ${imported} 条客户数据`);
+}
+
+function cancelExcelImport() {
+  const statusEl = document.getElementById('importStatus');
+  const previewEl = document.getElementById('importPreview');
+  statusEl.textContent = '';
+  previewEl.style.display = 'none';
+  window._pendingExcelImport = null;
+}
+
 function renderAddressList(month) {
   const list = document.getElementById('addressList');
   if (!list) return;
