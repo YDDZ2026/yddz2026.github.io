@@ -1318,15 +1318,19 @@ function parseAndFillIdCard() {
     }
   }
 
-  // --- 6.5 Truncate detail address: village address stops at 村, city address keeps full ---
+  // --- 6.5 Truncate detail address: village→村, city→路 ---
   if (detailAddr) {
     // If address contains 村 (village), keep only up to and including 村
     const villageIdx = detailAddr.indexOf('村');
     if (villageIdx >= 0) {
       detailAddr = detailAddr.substring(0, villageIdx + 1);
+    } else {
+      // City address: keep only up to 路/街/道/巷 (road name), remove numbers after
+      const roadMatch = detailAddr.match(/^.*?[路街道巷]/);
+      if (roadMatch) {
+        detailAddr = roadMatch[0];
+      }
     }
-    // For city addresses (no 村), keep full address including numbers
-    // Remove trailing punctuation only
     detailAddr = detailAddr.replace(/[，。、,.;:：]+$/g, '').trim();
   }
 
