@@ -11,7 +11,6 @@ const GITHUB_API = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB
 const GITHUB_RAW = `https://yddz2026.github.io/${GITHUB_CONFIG.dataFile}`;
 const GITHUB_READ_ENABLED = true;
 let pollTimer = null;
-let lastDataSHA = '';
 
 // ========== App State ==========
 let currentView = 'tv';
@@ -329,6 +328,9 @@ function setSyncStatus(s) {
 }
 
 // ========== GitHub Backend ==========
+let lastCloudUpdate = '';
+let isInitialLoad = true;
+
 async function loadFromGitHub() {
   if (!GITHUB_READ_ENABLED) { setSyncStatus('offline'); return; }
   try {
@@ -336,20 +338,25 @@ async function loadFromGitHub() {
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const cloudData = await resp.json();
     if (cloudData && cloudData.monthlyData) {
-      const newSHA = JSON.stringify(cloudData.monthlyData).length;
-      if (newSHA !== lastDataSHA) {
-        lastDataSHA = newSHA;
+      // Use timestamp for comparison instead of expensive JSON.stringify
+      const cloudUpdate = cloudData.updated_at || '';
+      if (cloudUpdate !== lastCloudUpdate) {
+        lastCloudUpdate = cloudUpdate;
         data.monthlyData = cloudData.monthlyData;
         if (cloudData.addressDetails) data.addressDetails = cloudData.addressDetails;
         localStorage.setItem(STORAGE_KEY, JSON.stringify({ monthlyData: data.monthlyData, addressDetails: data.addressDetails || {} }));
         const info = { name: cloudData.updated_by || '系统', time: cloudData.updated_at ? new Date(cloudData.updated_at).toLocaleString('zh-CN', {hour12: false}) : '' };
         localStorage.setItem(UPDATE_KEY, JSON.stringify(info));
         updateLastUpdate(info);
-        refreshCurrentView();
+        // Skip re-render on initial load (switchView already rendered)
+        if (!isInitialLoad) {
+          refreshCurrentView();
+        }
       }
     }
     setSyncStatus('online');
   } catch(e) { console.error('Load failed:', e); setSyncStatus('offline'); }
+  isInitialLoad = false;
 }
 
 async function saveToGitHub(updater) {
@@ -365,7 +372,7 @@ async function saveToGitHub(updater) {
       body: JSON.stringify({ message: `更新客户数据 - ${updater || '系统'} - ${new Date().toISOString()}`, content: btoa(unescape(encodeURIComponent(JSON.stringify(content)))), sha: sha || undefined, branch: GITHUB_CONFIG.branch })
     });
     if (!updateResp.ok) throw new Error('HTTP ' + updateResp.status);
-    lastDataSHA = JSON.stringify(data.monthlyData).length;
+    lastCloudUpdate = new Date().toISOString();
     setSyncStatus('online');
   } catch(e) { console.error('Save failed:', e); setSyncStatus('offline'); showToast('云端同步失败，数据已保存在本地'); }
 }
@@ -373,14 +380,22 @@ async function saveToGitHub(updater) {
 function startPolling() {
   if (!GITHUB_READ_ENABLED) return;
   if (pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(loadFromGitHub, 30000);
+  pollTimer = setInterval(loadFromGitHub, 60000); // 60s
 }
 
 // ========== Data Management ==========
 function loadData() {
-  // Always start with EMBEDDED_DATA for static map data (districtGeo, streetsGeo, etc.)
-  data = JSON.parse(JSON.stringify(EMBEDDED_DATA));
+  // Reference static map data directly (read-only, never modified)
   // Only load dynamic data (monthlyData, addressDetails) from localStorage
+  data = {
+    districtNames: EMBEDDED_DATA.districtNames,
+    districtGeo: EMBEDDED_DATA.districtGeo,
+    streetsGeo: EMBEDDED_DATA.streetsGeo,
+    streetsByDistrict: EMBEDDED_DATA.streetsByDistrict,
+    monthlyData: {},
+    addressDetails: {}
+  };
+  // Load dynamic data from localStorage
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
     try {
@@ -1454,8 +1469,9 @@ function submitData() {
 
 function resetData() {
   if (!confirm('确定要恢复为默认数据吗？所有月份数据将被清零。')) return;
-  data = JSON.parse(JSON.stringify(EMBEDDED_DATA));
-  if (!data.addressDetails) data.addressDetails = {};
+  data.monthlyData = {};
+  data.addressDetails = {};
+  loadData();
   saveData('系统重置');
   initUpload();
   refreshCurrentView();
@@ -1511,7 +1527,6 @@ function updateClock() {
 
 // ========== Init ==========
 loadData();
-refreshMonthSelectors();
 loadFromGitHub();
 startPolling();
 
