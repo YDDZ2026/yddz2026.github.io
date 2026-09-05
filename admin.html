@@ -10,7 +10,7 @@
 <link rel="preload" href="data.json" as="fetch" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 <script defer src="map-data.js?v=20260905a"></script>
-<script defer src="admin.js?v=20260905a"></script>
+<script defer src="admin.js?v=20260905b"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
@@ -359,29 +359,34 @@ tr:hover { background: #fafafa; }
 
     <!-- ====== Regions View ====== -->
     <div class="view" id="view-regions">
+      <div class="table-toolbar">
+        <select class="select-input" id="regionDistrictFilter" onchange="onRegionDistrictChange()">
+          <option value="">全部区县（概览）</option>
+        </select>
+      </div>
       <div class="stats-grid">
         <div class="stat-card">
-          <div class="label">核心区域</div>
+          <div class="label" id="coreLabel">核心区域</div>
           <div class="value" style="font-size:20px;" id="coreRegion">-</div>
           <div class="trend up" id="coreRegionCount"></div>
         </div>
         <div class="stat-card">
-          <div class="label">覆盖率</div>
+          <div class="label" id="coverageLabel">覆盖率</div>
           <div class="value" id="coverageRate">-</div>
           <div class="trend" id="coverageDetail"></div>
         </div>
         <div class="stat-card">
-          <div class="label">区域数</div>
+          <div class="label" id="regionLabel">区域数</div>
           <div class="value" id="regionCount">-</div>
           <div class="trend" id="regionDetail"></div>
         </div>
       </div>
       <div class="chart-card">
-        <div class="chart-card-title">客户分布地图</div>
+        <div class="chart-card-title" id="mapTitle">客户分布地图</div>
         <div class="chart-container" id="regionMap" style="height:500px;"></div>
       </div>
       <div class="chart-card">
-        <div class="chart-card-title">区县客户排名</div>
+        <div class="chart-card-title" id="rankTitle">区县客户排名</div>
         <div class="chart-container" id="rankChart" style="height:400px;"></div>
       </div>
     </div>

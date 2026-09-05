@@ -361,66 +361,127 @@ function goPage(page) {
 }
 
 // ====== Regions View ======
+let selectedRegionDistrict = '';
+
 function renderRegions() {
   if (!appData) return;
 
-  const districtData = getCumulativeDistrictData();
-  const sorted = Object.entries(districtData)
-    .filter(([k]) => k !== '其他')
-    .sort((a, b) => b[1].total - a[1].total);
-  const totalCustomers = sorted.reduce((s, [, v]) => s + v.total, 0);
+  // Populate district filter
+  const sel = document.getElementById('regionDistrictFilter');
+  if (sel.options.length <= 1) {
+    const districtData = getCumulativeDistrictData();
+    Object.entries(districtData)
+      .filter(([k]) => k !== '其他')
+      .sort((a, b) => b[1].total - a[1].total)
+      .forEach(([name]) => {
+        const opt = document.createElement('option');
+        opt.value = name; opt.textContent = name;
+        sel.appendChild(opt);
+      });
+  }
 
-  // Stats
-  const core = sorted[0];
-  document.getElementById('coreRegion').textContent = core ? core[0] : '-';
-  document.getElementById('coreRegionCount').textContent = core ? `客户数: ${core[1].total} (${(core[1].total * 100 / totalCustomers).toFixed(1)}%)` : '';
-
-  const allDistricts = 14;
-  const covered = sorted.filter(([, v]) => v.total > 0).length;
-  document.getElementById('coverageRate').textContent = (covered * 100 / allDistricts).toFixed(0) + '%';
-  document.getElementById('coverageDetail').textContent = `${covered}/${allDistricts} 区县有客户`;
-
-  document.getElementById('regionCount').textContent = sorted.length;
-  document.getElementById('regionDetail').textContent = `合计 ${totalCustomers} 人`;
-
-  // Map chart
-  renderRegionMap(districtData);
-  // Ranking chart
-  renderRankChart(sorted);
+  renderRegionView();
 }
 
-function renderRegionMap(districtData) {
+function onRegionDistrictChange() {
+  selectedRegionDistrict = document.getElementById('regionDistrictFilter').value;
+  renderRegionView();
+}
+
+function getCumulativeStreetData(district) {
+  const result = {};
+  for (const md of Object.values(appData.monthlyData || {})) {
+    const sd = (md.streetData || {})[district] || {};
+    for (const [street, v] of Object.entries(sd)) {
+      if (!result[street]) result[street] = { total: 0, vip: 0 };
+      result[street].total += v.total || 0;
+      result[street].vip += v.vip || 0;
+    }
+  }
+  return result;
+}
+
+function renderRegionView() {
+  const districtData = getCumulativeDistrictData();
+
+  if (selectedRegionDistrict) {
+    // ===== Street-level view for selected district =====
+    const streetData = getCumulativeStreetData(selectedRegionDistrict);
+    const sorted = Object.entries(streetData).sort((a, b) => b[1].total - a[1].total);
+    const totalCustomers = sorted.reduce((s, [, v]) => s + v.total, 0);
+
+    // Stats
+    const core = sorted[0];
+    document.getElementById('coreLabel').textContent = '核心街道';
+    document.getElementById('coreRegion').textContent = core ? core[0] : '-';
+    document.getElementById('coreRegionCount').textContent = core ? `客户数: ${core[1].total} (${totalCustomers > 0 ? (core[1].total * 100 / totalCustomers).toFixed(1) : 0}%)` : '';
+
+    const allStreets = sorted.length;
+    const covered = sorted.filter(([, v]) => v.total > 0).length;
+    document.getElementById('coverageLabel').textContent = '街道覆盖率';
+    document.getElementById('coverageRate').textContent = allStreets > 0 ? (covered * 100 / allStreets).toFixed(0) + '%' : '-';
+    document.getElementById('coverageDetail').textContent = `${covered}/${allStreets} 街道有客户`;
+
+    document.getElementById('regionLabel').textContent = '街道数';
+    document.getElementById('regionCount').textContent = sorted.length;
+    document.getElementById('regionDetail').textContent = `合计 ${totalCustomers} 人`;
+
+    document.getElementById('mapTitle').textContent = `${selectedRegionDistrict} - 街道分布地图`;
+    document.getElementById('rankTitle').textContent = `${selectedRegionDistrict} - 街道客户排名`;
+
+    renderStreetMap(selectedRegionDistrict, streetData);
+    renderStreetRankChart(sorted, selectedRegionDistrict);
+  } else {
+    // ===== District-level overview =====
+    const sorted = Object.entries(districtData)
+      .filter(([k]) => k !== '其他')
+      .sort((a, b) => b[1].total - a[1].total);
+    const totalCustomers = sorted.reduce((s, [, v]) => s + v.total, 0);
+
+    const core = sorted[0];
+    document.getElementById('coreLabel').textContent = '核心区域';
+    document.getElementById('coreRegion').textContent = core ? core[0] : '-';
+    document.getElementById('coreRegionCount').textContent = core ? `客户数: ${core[1].total} (${(core[1].total * 100 / totalCustomers).toFixed(1)}%)` : '';
+
+    const allDistricts = 14;
+    const covered = sorted.filter(([, v]) => v.total > 0).length;
+    document.getElementById('coverageLabel').textContent = '覆盖率';
+    document.getElementById('coverageRate').textContent = (covered * 100 / allDistricts).toFixed(0) + '%';
+    document.getElementById('coverageDetail').textContent = `${covered}/${allDistricts} 区县有客户`;
+
+    document.getElementById('regionLabel').textContent = '区域数';
+    document.getElementById('regionCount').textContent = sorted.length;
+    document.getElementById('regionDetail').textContent = `合计 ${totalCustomers} 人`;
+
+    document.getElementById('mapTitle').textContent = '客户分布地图';
+    document.getElementById('rankTitle').textContent = '区县客户排名';
+
+    renderDistrictMap(districtData);
+    renderDistrictRankChart(sorted);
+  }
+}
+
+function renderDistrictMap(districtData) {
   const el = document.getElementById('regionMap');
   if (!el) return;
   if (charts.regionMap) { charts.regionMap.dispose(); }
   charts.regionMap = echarts.init(el);
 
-  // Use embedded map data if available
   if (window.MAP_DATA && window.MAP_DATA.districtGeo) {
+    // Build map from district-level GeoJSON only (for overview)
     const mapData = { type: 'FeatureCollection', features: [] };
-    for (const [dist, geo] of Object.entries(window.MAP_DATA.districtGeo)) {
-      if (geo.features) {
-        mapData.features.push(...geo.features);
-      }
+    for (const [, geo] of Object.entries(window.MAP_DATA.districtGeo)) {
+      if (geo.features) mapData.features.push(...geo.features);
     }
-    // Also add streetsGeo
-    if (window.MAP_DATA.streetsGeo) {
-      for (const [dist, geo] of Object.entries(window.MAP_DATA.streetsGeo)) {
-        if (geo.features) {
-          mapData.features.push(...geo.features);
-        }
-      }
-    }
-    echarts.registerMap('yichang', mapData);
+    echarts.registerMap('yichang_district', mapData);
 
-    const maxVal = Math.max(...Object.values(districtData).map(d => d.total));
+    const maxVal = Math.max(1, ...Object.values(districtData).filter(d => d).map(d => d.total));
     charts.regionMap.setOption({
       tooltip: {
         trigger: 'item',
         formatter: function(p) {
           const val = districtData[p.name] ? districtData[p.name].total : 0;
-          const distName = p.data && p.data.district ? p.data.district : '';
-          return p.name + (distName ? ` (${distName})` : '') + '<br/>客户数: <b>' + val + '</b>';
+          return p.name + '<br/>客户数: <b>' + val + '</b>';
         }
       },
       visualMap: {
@@ -431,7 +492,7 @@ function renderRegionMap(districtData) {
         textStyle: { fontSize: 11 }
       },
       series: [{
-        type: 'map', map: 'yichang', roam: true,
+        type: 'map', map: 'yichang_district', roam: true,
         label: { show: true, fontSize: 9, color: '#333' },
         emphasis: { label: { show: true, fontWeight: 'bold' }, itemStyle: { areaColor: '#faad14' } },
         data: Object.entries(districtData)
@@ -444,29 +505,92 @@ function renderRegionMap(districtData) {
   }
 }
 
-function renderRankChart(sorted) {
+function renderStreetMap(district, streetData) {
+  const el = document.getElementById('regionMap');
+  if (!el) return;
+  if (charts.regionMap) { charts.regionMap.dispose(); }
+  charts.regionMap = echarts.init(el);
+
+  if (window.MAP_DATA && window.MAP_DATA.streetsGeo && window.MAP_DATA.streetsGeo[district]) {
+    const geoData = window.MAP_DATA.streetsGeo[district];
+    const mapName = 'street_' + district;
+    echarts.registerMap(mapName, geoData);
+
+    const maxVal = Math.max(1, ...Object.values(streetData).map(v => v.total));
+    charts.regionMap.setOption({
+      tooltip: {
+        trigger: 'item',
+        formatter: function(p) {
+          const val = streetData[p.name] ? streetData[p.name].total : 0;
+          return p.name + '<br/>客户数: <b style="color:#1890ff">' + val + '</b>';
+        }
+      },
+      visualMap: {
+        min: 0, max: maxVal,
+        calculable: true, orient: 'vertical', right: 10, top: 'center',
+        text: ['多', '少'],
+        inRange: { color: ['#f0f9ff', '#bae6fd', '#38bdf8', '#0284c7', '#075985'] },
+        textStyle: { fontSize: 11 }
+      },
+      series: [{
+        type: 'map', map: mapName, roam: true,
+        label: { show: true, fontSize: 10, color: '#333' },
+        emphasis: { label: { show: true, fontWeight: 'bold' }, itemStyle: { areaColor: '#faad14' } },
+        data: Object.entries(streetData)
+          .filter(([k]) => k !== '其他')
+          .map(([name, v]) => ({ name, value: v.total }))
+      }]
+    });
+  } else {
+    el.innerHTML = '<div class="loading">该区县无街道地图数据</div>';
+  }
+}
+
+function renderDistrictRankChart(sorted) {
   const el = document.getElementById('rankChart');
   if (!el) return;
   if (charts.rank) { charts.rank.dispose(); }
   charts.rank = echarts.init(el);
 
   const data = sorted.slice(0, 15);
-
   charts.rank.setOption({
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
     grid: { left: '25%', right: '8%', top: '3%', bottom: '3%' },
     xAxis: { type: 'value' },
-    yAxis: {
-      type: 'category',
-      data: data.map(d => d[0]).reverse(),
-      axisLabel: { fontSize: 11 }
-    },
+    yAxis: { type: 'category', data: data.map(d => d[0]).reverse(), axisLabel: { fontSize: 11 } },
     series: [{
       type: 'bar',
       data: data.map(d => d[1].total).reverse(),
       itemStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
           { offset: 0, color: '#1890ff' }, { offset: 1, color: '#69c0ff' }
+        ]),
+        borderRadius: [0, 4, 4, 0]
+      },
+      barWidth: '60%',
+      label: { show: true, position: 'right', fontSize: 11, color: '#666' }
+    }]
+  });
+}
+
+function renderStreetRankChart(sorted, district) {
+  const el = document.getElementById('rankChart');
+  if (!el) return;
+  if (charts.rank) { charts.rank.dispose(); }
+  charts.rank = echarts.init(el);
+
+  const data = sorted.slice(0, 15);
+  charts.rank.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: '30%', right: '8%', top: '3%', bottom: '3%' },
+    xAxis: { type: 'value' },
+    yAxis: { type: 'category', data: data.map(d => d[0]).reverse(), axisLabel: { fontSize: 11 } },
+    series: [{
+      type: 'bar',
+      data: data.map(d => d[1].total).reverse(),
+      itemStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+          { offset: 0, color: '#0284c7' }, { offset: 1, color: '#38bdf8' }
         ]),
         borderRadius: [0, 4, 4, 0]
       },
