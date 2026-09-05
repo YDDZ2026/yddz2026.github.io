@@ -432,8 +432,8 @@ function renderRegionView() {
     document.getElementById('mapTitle').textContent = `${selectedRegionDistrict} - 街道分布地图`;
     document.getElementById('rankTitle').textContent = `${selectedRegionDistrict} - 街道客户排名`;
 
-    renderStreetMap(selectedRegionDistrict, streetData);
-    renderStreetRankChart(sorted, selectedRegionDistrict);
+    try { renderStreetMap(selectedRegionDistrict, streetData); } catch(e) { console.error('StreetMap:', e); }
+    try { renderStreetRankChart(sorted, selectedRegionDistrict); } catch(e) { console.error('StreetRank:', e); }
   } else {
     // ===== District-level overview =====
     const sorted = Object.entries(districtData)
@@ -459,8 +459,8 @@ function renderRegionView() {
     document.getElementById('mapTitle').textContent = '客户分布地图';
     document.getElementById('rankTitle').textContent = '区县客户排名';
 
-    renderDistrictMap(districtData);
-    renderDistrictRankChart(sorted);
+    try { renderDistrictMap(districtData); } catch(e) { console.error('DistrictMap:', e); }
+    try { renderDistrictRankChart(sorted); } catch(e) { console.error('DistrictRank:', e); }
   }
 }
 
