@@ -407,8 +407,11 @@ function renderRegionView() {
   if (selectedRegionDistrict) {
     // ===== Street-level view for selected district =====
     const streetData = getCumulativeStreetData(selectedRegionDistrict);
-    const sorted = Object.entries(streetData).sort((a, b) => b[1].total - a[1].total);
-    const totalCustomers = sorted.reduce((s, [, v]) => s + v.total, 0);
+    const sortedAll = Object.entries(streetData).sort((a, b) => b[1].total - a[1].total);
+    // Exclude "其他" from display stats and charts (it's a fallback category)
+    const sorted = sortedAll.filter(([k]) => k !== '其他');
+    const totalCustomers = sortedAll.reduce((s, [, v]) => s + v.total, 0);
+    const mappedCustomers = sorted.reduce((s, [, v]) => s + v.total, 0);
 
     // Stats
     const core = sorted[0];
@@ -424,7 +427,7 @@ function renderRegionView() {
 
     document.getElementById('regionLabel').textContent = '街道数';
     document.getElementById('regionCount').textContent = sorted.length;
-    document.getElementById('regionDetail').textContent = `合计 ${totalCustomers} 人`;
+    document.getElementById('regionDetail').textContent = `已定位 ${mappedCustomers} / 合计 ${totalCustomers} 人`;
 
     document.getElementById('mapTitle').textContent = `${selectedRegionDistrict} - 街道分布地图`;
     document.getElementById('rankTitle').textContent = `${selectedRegionDistrict} - 街道客户排名`;
@@ -516,7 +519,11 @@ function renderStreetMap(district, streetData) {
     const mapName = 'street_' + district;
     echarts.registerMap(mapName, geoData);
 
-    const maxVal = Math.max(1, ...Object.values(streetData).map(v => v.total));
+    // Calculate max from mapped streets only (exclude "其他")
+    const mappedVals = Object.entries(streetData)
+      .filter(([k]) => k !== '其他')
+      .map(v => v.total);
+    const maxVal = Math.max(1, ...mappedVals);
     charts.regionMap.setOption({
       tooltip: {
         trigger: 'item',
