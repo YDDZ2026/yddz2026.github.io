@@ -9,7 +9,7 @@ const GITHUB_CONFIG = {
   token: localStorage.getItem('gh_token') || ''
 };
 const GITHUB_API = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.dataFile}`;
-const GITHUB_RAW = `https://raw.githubusercontent.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${GITHUB_CONFIG.dataFile}`;
+const GITHUB_RAW = `https://yddz2026.github.io/${GITHUB_CONFIG.dataFile}`;
 const GITHUB_READ_ENABLED = true;
 let pollTimer = null;
 let lastDataSHA = '';
