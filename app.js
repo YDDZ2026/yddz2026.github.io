@@ -1318,16 +1318,15 @@ function parseAndFillIdCard() {
     }
   }
 
-  // --- 6.5 Truncate detail address to village level (remove 组/号/栋/单元/室) ---
+  // --- 6.5 Truncate detail address: village address stops at 村, city address keeps full ---
   if (detailAddr) {
-    // Remove trailing patterns like "二组", "3号", "5栋", "2单元", "301室" etc.
-    detailAddr = detailAddr.replace(/[一二三四五六七八九十百\d]+组/g, '');
-    detailAddr = detailAddr.replace(/[一二三四五六七八九十百\d]+号/g, '');
-    detailAddr = detailAddr.replace(/[一二三四五六七八九十百\d]+栋/g, '');
-    detailAddr = detailAddr.replace(/[一二三四五六七八九十百\d]+单元/g, '');
-    detailAddr = detailAddr.replace(/[一二三四五六七八九十百\d]+室/g, '');
-    detailAddr = detailAddr.replace(/[一二三四五六七八九十百\d]+楼/g, '');
-    // Remove trailing punctuation
+    // If address contains 村 (village), keep only up to and including 村
+    const villageIdx = detailAddr.indexOf('村');
+    if (villageIdx >= 0) {
+      detailAddr = detailAddr.substring(0, villageIdx + 1);
+    }
+    // For city addresses (no 村), keep full address including numbers
+    // Remove trailing punctuation only
     detailAddr = detailAddr.replace(/[，。、,.;:：]+$/g, '').trim();
   }
 
