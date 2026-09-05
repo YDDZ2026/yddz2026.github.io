@@ -7,11 +7,11 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preload" href="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" as="script" crossorigin>
 <link rel="preload" href="map-data.js?v=20260905a" as="script">
-<link rel="preload" href="app.js?v=20260905h" as="script">
+<link rel="preload" href="app.js?v=20260905i" as="script">
 <link rel="preload" href="data.json" as="fetch" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 <script defer src="map-data.js?v=20260905a"></script>
-<script defer src="app.js?v=20260905h"></script>
+<script defer src="app.js?v=20260905i"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
@@ -479,12 +479,11 @@ setTimeout(function(){
   <div id="uploadContent" style="display:none;">
     <div class="upload-header">
       <div class="upload-title">数据上传 <span style="font-size:14px;color:var(--tv-success);">✓ 管理员</span></div>
-      <div class="upload-subtitle">按月编辑宜昌各区县客户数据，提交后实时同步到所有设备</div>
+      <div class="upload-subtitle">录入客户地址详情，系统自动归类到对应区县和街道，提交后实时同步到所有设备</div>
     </div>
     <div class="upload-info">
-      💡 <b>按月统计</b>：选择月份后编辑该月各区县客户数据，支持2026年8月起逐月统计。<br>
-      📊 <b>累计查看</b>：在大屏选择"累计"可查看所有月份汇总数据。<br>
       📋 <b>地址录入</b>：录入客户地址详情，系统自动归类到对应区县和街道。<br>
+      🪪 <b>身份证识别</b>：粘贴身份证信息自动提取姓名和住址。<br>
       🔴 右上角状态：绿色"已同步"=云端在线，红色"离线模式"=仅本地存储。
     </div>
   <div class="upload-user">
@@ -497,10 +496,8 @@ setTimeout(function(){
     <div style="font-size:11px;color:var(--mobile-dim);margin-top:4px;">Token 保存在浏览器本地，不会上传到服务器。从 https://github.com/settings/tokens 创建，需勾选 repo 权限。</div>
   </div>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
-    <label style="font-size:14px;font-weight:600;color:var(--mobile-text);">编辑月份：</label>
-    <select id="uploadMonthSelect" onchange="onUploadMonthChange()" style="padding:10px 16px;border:2px solid #e5e7eb;border-radius:10px;font-size:14px;cursor:pointer;"></select>
-    <button class="btn-secondary" id="addMonthBtn" onclick="addNewMonth()" style="padding:10px 16px;">+ 新增月份</button>
+  <div style="margin-bottom:16px;padding:10px 16px;background:var(--accent-light);border-radius:8px;font-size:14px;color:var(--mobile-text);">
+    📅 当前录入月份：<b id="currentMonthLabel">--</b>
   </div>
 
   <div class="upload-table" id="uploadTable"></div>

@@ -345,7 +345,6 @@ async function loadFromGitHub() {
         const info = { name: cloudData.updated_by || '系统', time: cloudData.updated_at ? new Date(cloudData.updated_at).toLocaleString('zh-CN', {hour12: false}) : '' };
         localStorage.setItem(UPDATE_KEY, JSON.stringify(info));
         updateLastUpdate(info);
-        refreshMonthSelectors();
         refreshCurrentView();
       }
     }
@@ -421,7 +420,6 @@ function saveData(updater) {
 bc.onmessage = function(e) {
   if (e.data.type === 'data_update') {
     data = e.data.data;
-    refreshMonthSelectors();
     refreshCurrentView();
     showToast('数据已被 ' + e.data.update.name + ' 更新');
     updateLastUpdate(e.data.update);
@@ -931,11 +929,19 @@ function initUpload() {
   }
   // Ensure current month exists in data
   ensureCurrentMonth();
-  refreshMonthSelectors();
+  // Show current month label
+  const monthLabel = document.getElementById('currentMonthLabel');
+  if (monthLabel) monthLabel.textContent = getMonthLabel(getCurrentMonth());
   onUploadMonthChange();
   populateDistrictSelect();
   const info = localStorage.getItem(UPDATE_KEY);
   if (info) { try { updateLastUpdate(JSON.parse(info)); } catch(e) {} }
+}
+
+// Get current month string in YYYY-MM format
+function getCurrentMonth() {
+  const now = new Date();
+  return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
 }
 
 // Ensure current month exists in monthlyData with zero-initialized structure
@@ -958,9 +964,7 @@ function ensureCurrentMonth() {
 }
 
 function onUploadMonthChange() {
-  const sel = document.getElementById('uploadMonthSelect');
-  if (!sel) return;
-  const month = sel.value;
+  const month = getCurrentMonth();
   const dd = getMonthDistrictData(month);
   const names = data.districtNames || [];
 
@@ -1245,7 +1249,7 @@ function addAddressItem() {
   const detail = document.getElementById('addrDetail').value.trim();
   const name = document.getElementById('addrName').value.trim();
   const vip = parseInt(document.getElementById('addrVip').value);
-  const month = document.getElementById('uploadMonthSelect').value;
+  const month = getCurrentMonth();
 
   if (!dist) { showToast('请选择区县'); return; }
   if (!street) { showToast('请选择街道/乡镇'); return; }
@@ -1288,7 +1292,7 @@ function renderAddressList(month) {
 }
 
 function removeAddressItem(index) {
-  const month = document.getElementById('uploadMonthSelect').value;
+  const month = getCurrentMonth();
   const items = data.addressDetails[month] || [];
   if (index < 0 || index >= items.length) return;
   items.splice(index, 1);
@@ -1319,7 +1323,7 @@ function removeAddressItem(index) {
 
 function submitData() {
   const userName = document.getElementById('userName').value.trim() || '匿名用户';
-  const month = document.getElementById('uploadMonthSelect').value;
+  const month = getCurrentMonth();
 
   document.querySelectorAll('#uploadTable input').forEach(input => {
     const district = input.dataset.district;
@@ -1332,7 +1336,7 @@ function submitData() {
 
   saveData(userName);
   showToast('数据提交成功！正在同步到所有设备...');
-  refreshMonthSelectors();
+  onUploadMonthChange();
   refreshCurrentView();
 }
 
@@ -1342,7 +1346,6 @@ function resetData() {
   if (!data.addressDetails) data.addressDetails = {};
   saveData('系统重置');
   initUpload();
-  refreshMonthSelectors();
   refreshCurrentView();
   showToast('已恢复默认数据');
 }
