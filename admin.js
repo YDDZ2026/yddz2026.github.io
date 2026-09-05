@@ -516,14 +516,16 @@ function renderStreetMap(district, streetData) {
 
   if (window.MAP_DATA && window.MAP_DATA.streetsGeo && window.MAP_DATA.streetsGeo[district]) {
     const geoData = window.MAP_DATA.streetsGeo[district];
-    const mapName = 'street_' + district;
-    echarts.registerMap(mapName, geoData);
+    // Use ASCII-safe map name to avoid potential encoding issues
+    const mapName = 'street_map';
+    try { echarts.registerMap(mapName, geoData); } catch(e) { console.error('registerMap error:', e.message || e); }
 
     // Calculate max from mapped streets only (exclude "其他")
     const mappedVals = Object.entries(streetData)
       .filter(([k]) => k !== '其他')
-      .map(v => v.total);
+      .map(v => v[1].total);
     const maxVal = Math.max(1, ...mappedVals);
+
     charts.regionMap.setOption({
       tooltip: {
         trigger: 'item',
@@ -533,6 +535,7 @@ function renderStreetMap(district, streetData) {
         }
       },
       visualMap: {
+        type: 'continuous',
         min: 0, max: maxVal,
         calculable: true, orient: 'vertical', right: 10, top: 'center',
         text: ['多', '少'],
@@ -545,7 +548,7 @@ function renderStreetMap(district, streetData) {
         emphasis: { label: { show: true, fontWeight: 'bold' }, itemStyle: { areaColor: '#faad14' } },
         data: Object.entries(streetData)
           .filter(([k]) => k !== '其他')
-          .map(([name, v]) => ({ name, value: v.total }))
+          .map(([name, v]) => ({ name: name, value: v.total }))
       }]
     });
   } else {
