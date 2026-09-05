@@ -1211,16 +1211,16 @@ function parseAndFillIdCard() {
   cleaned = cleaned.replace(/\d{4}年\d{1,2}月\d{1,2}日/g, '');
   cleaned = cleaned.replace(/\d{4}-\d{1,2}-\d{1,2}/g, '');
 
-  // Remove gender and ethnicity
+  // Remove gender and ethnicity (non-greedy to avoid eating 出生 keyword)
   cleaned = cleaned.replace(/性别[:\s]*[男女]/g, '');
-  cleaned = cleaned.replace(/民族[:\s]*[\u4e00-\u9fa5]{1,2}/g, '');
+  cleaned = cleaned.replace(/民族[:\s]*[\u4e00-\u9fa5]{1,2}?(?=出生|住址|住\s|性别|公民|号码|签发|有效|\s|$)/g, '');
 
-  // Remove keyword labels
+  // Remove keyword labels (handle "住 址" with space)
   cleaned = cleaned.replace(/公民身份号码/g, '');
   cleaned = cleaned.replace(/身份号码/g, '');
   cleaned = cleaned.replace(/号码/g, '');
   cleaned = cleaned.replace(/出生/g, '');
-  cleaned = cleaned.replace(/住址/g, '');
+  cleaned = cleaned.replace(/住\s*址/g, '');  // matches both 住址 and 住 址
   cleaned = cleaned.replace(/签发机关/g, '');
   cleaned = cleaned.replace(/有效期限/g, '');
 
@@ -1234,11 +1234,13 @@ function parseAndFillIdCard() {
 
   // Fallback: if address empty, try extracting between 住址 and 公民身份号码
   if (!address) {
-    const addrStart = fullText.indexOf('住址');
+    const addrStart = fullText.search(/住\s*址/);
     const idStart = fullText.indexOf('公民身份');
     if (addrStart >= 0) {
-      const end = idStart > addrStart ? idStart : fullText.length;
-      address = fullText.substring(addrStart + 2, end).replace(/[\s\n\r]/g, '').replace(/[\d\-\.\/年月日]/g, '').trim();
+      const addrEnd = fullText.indexOf('住', addrStart) + 1; // skip past 住
+      const actualAddrStart = fullText.search(/住\s*址/) + fullText.substring(fullText.search(/住\s*址/)).indexOf('址') + 1;
+      const end = idStart > actualAddrStart ? idStart : fullText.length;
+      address = fullText.substring(actualAddrStart, end).replace(/[\s\n\r]/g, '').replace(/[\d\-\.\/年月日]/g, '').trim();
     }
   }
 
