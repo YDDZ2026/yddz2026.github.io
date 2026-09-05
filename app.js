@@ -642,7 +642,54 @@ function drillToDistrict(districtName) {
     }]
   }, true);
 
+  // Re-register click handler: clicking a street shows street customer detail
+  tvChart.off('click');
+  tvChart.on('click', function(params) {
+    if (params.name) {
+      showStreetDetailTV(districtName, params.name);
+    }
+  });
+
   renderTVDetailPanel(districtName);
+}
+
+// Show customer detail for a specific street in TV view
+function showStreetDetailTV(districtName, streetName) {
+  tvChart.dispatchAction({ type: 'highlight', name: streetName });
+  document.getElementById('tvMapTitle').textContent = streetName + ' - 客户明细 - ' + getRangeLabel();
+
+  const sd = getRangeStreetData(districtName);
+  const sInfo = sd[streetName] || {total:0, vip:0};
+  const allCustomers = getRangeCustomerList(districtName);
+  const streetCustomers = allCustomers.filter(c => c.street === streetName);
+
+  let customerHtml = '';
+  streetCustomers.forEach((c, i) => {
+    const vipBadge = c.vip === 1 ? '<span class="tv-cust-vip">VIP</span>' : '<span class="tv-cust-normal">普通</span>';
+    const monthLabel = c.month ? c.month.replace('-', '年') + '月' : '';
+    customerHtml += `<div class="tv-cust-row">
+      <span class="tv-cust-name">${c.name || '未署名'}</span>
+      <span class="tv-cust-addr">${c.detail || ''}</span>
+      <span class="tv-cust-month">${monthLabel}</span>
+      ${vipBadge}
+    </div>`;
+  });
+
+  document.getElementById('tvPanel').innerHTML = `
+    <div class="tv-detail-card">
+      <div class="tv-detail-name">${streetName}</div>
+      <div class="tv-detail-grid">
+        <div class="tv-detail-stat"><div class="label">客户总数</div><div class="value" style="color:#3b82f6">${sInfo.total}</div></div>
+        <div class="tv-detail-stat"><div class="label">VIP客户</div><div class="value" style="color:#10b981">${sInfo.vip}</div></div>
+        <div class="tv-detail-stat"><div class="label">普通客户</div><div class="value" style="color:#06b6d4">${sInfo.total-sInfo.vip}</div></div>
+        <div class="tv-detail-stat"><div class="label">所属区县</div><div class="value" style="color:#f59e0b;font-size:14px">${districtName}</div></div>
+      </div>
+      <div style="margin-top:20px">
+        <div style="font-size:14px;font-weight:600;margin-bottom:8px;color:#e0e7ff">客户明细 (${streetCustomers.length} 户)</div>
+        <div class="tv-cust-list">${customerHtml || '<div style="color:#6b7280;font-size:13px;">暂无客户记录</div>'}</div>
+      </div>
+    </div>
+  `;
 }
 
 function showOtherDetailTV() {
@@ -658,6 +705,13 @@ function showOtherDetailTV() {
 }
 
 function backToOverview() {
+  // If currently viewing a street detail, go back to district view
+  const title = document.getElementById('tvMapTitle').textContent;
+  if (currentDrillDistrict && currentDrillDistrict !== '其他' && !title.includes('客户分布 - ' + currentDrillDistrict)) {
+    drillToDistrict(currentDrillDistrict);
+    return;
+  }
+  // Otherwise go back to city overview
   currentDrillDistrict = null;
   document.getElementById('tvMapTitle').textContent = '客户分布 - ' + getRangeLabel();
   document.getElementById('tvBackBtn').style.display = 'none';
