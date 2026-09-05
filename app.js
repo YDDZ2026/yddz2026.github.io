@@ -1272,6 +1272,13 @@ function parseAndFillIdCard() {
 
   // Match known street
   const streets = matchedDistrict ? ((data.streetsByDistrict || {})[matchedDistrict] || []) : [];
+  // Street name aliases: map common abbreviations to official names
+  const streetAliases = {
+    '陆城街办': '陆城街道',
+    '陆城办事处': '陆城街道',
+    '红花街办': '红花街道',
+    '聂家街办': '聂家河街道',
+  };
   let matchedStreet = '';
   let detailAddr = remainingAddr;
 
@@ -1283,13 +1290,45 @@ function parseAndFillIdCard() {
     }
   }
 
-  // Fallback: extract street by pattern (XX镇/XX乡/XX街道)
+  // Check aliases if no direct match
+  if (!matchedStreet) {
+    for (const [alias, official] of Object.entries(streetAliases)) {
+      if (remainingAddr.includes(alias)) {
+        // Verify the official name exists in streets list
+        if (streets.includes(official)) {
+          matchedStreet = official;
+          detailAddr = remainingAddr.substring(remainingAddr.indexOf(alias) + alias.length);
+          break;
+        }
+      }
+    }
+  }
+
+  // Fallback: extract street by pattern (XX镇/XX乡/XX街道/XX街办)
   if (!matchedStreet && remainingAddr) {
-    const townMatch = remainingAddr.match(/([\u4e00-\u9fa5]{2,6}(?:镇|乡|街道))/);
+    const townMatch = remainingAddr.match(/([\u4e00-\u9fa5]{2,6}(?:镇|乡|街道|街办))/);
     if (townMatch) {
-      matchedStreet = townMatch[1];
+      let townName = townMatch[1];
+      // Normalize "街办" to "街道"
+      if (townName.endsWith('街办')) {
+        townName = townName.replace('街办', '街道');
+      }
+      matchedStreet = townName;
       detailAddr = remainingAddr.substring(remainingAddr.indexOf(townMatch[1]) + townMatch[1].length);
     }
+  }
+
+  // --- 6.5 Truncate detail address to village level (remove 组/号/栋/单元/室) ---
+  if (detailAddr) {
+    // Remove trailing patterns like "二组", "3号", "5栋", "2单元", "301室" etc.
+    detailAddr = detailAddr.replace(/[一二三四五六七八九十百\d]+组/g, '');
+    detailAddr = detailAddr.replace(/[一二三四五六七八九十百\d]+号/g, '');
+    detailAddr = detailAddr.replace(/[一二三四五六七八九十百\d]+栋/g, '');
+    detailAddr = detailAddr.replace(/[一二三四五六七八九十百\d]+单元/g, '');
+    detailAddr = detailAddr.replace(/[一二三四五六七八九十百\d]+室/g, '');
+    detailAddr = detailAddr.replace(/[一二三四五六七八九十百\d]+楼/g, '');
+    // Remove trailing punctuation
+    detailAddr = detailAddr.replace(/[，。、,.;:：]+$/g, '').trim();
   }
 
   // --- 7. Fill the form ---
