@@ -2046,3 +2046,24 @@ window.addEventListener('resize', () => {
     if (mobileChart) mobileChart.resize();
   }, 200);
 });
+
+// ========== Twemoji: Convert emoji to SVG images for cross-platform support ==========
+function parseEmojis() {
+  if (typeof twemoji !== 'undefined') {
+    twemoji.parse(document.body, { folder: 'svg', ext: '.svg', base: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/' });
+  }
+}
+// Parse on initial load
+setTimeout(parseEmojis, 200);
+// Watch for DOM changes and auto-parse new content
+let emojiObserver = null;
+let emojiParseTimer = null;
+function startEmojiObserver() {
+  if (typeof MutationObserver === 'undefined') return;
+  emojiObserver = new MutationObserver(() => {
+    if (emojiParseTimer) clearTimeout(emojiParseTimer);
+    emojiParseTimer = setTimeout(parseEmojis, 100);
+  });
+  emojiObserver.observe(document.body, { childList: true, subtree: true });
+}
+setTimeout(startEmojiObserver, 500);
