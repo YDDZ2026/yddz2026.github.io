@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据管理后台 - 宜都华晟达洲比亚迪</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" as="script" crossorigin>
+<link rel="preload" href="map-data.js?v=20260905a" as="script">
+<link rel="preload" href="data.json" as="fetch" crossorigin>
+<script defer src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script defer src="map-data.js?v=20260905a"></script>
+<script defer src="admin.js?v=20260905a"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --sidebar-bg: #0f1729;
+  --sidebar-item: #1a2333;
+  --sidebar-active: #1890ff;
+  --sidebar-text: #a0aec0;
+  --sidebar-text-active: #ffffff;
+  --content-bg: #f0f2f5;
+  --card-bg: #ffffff;
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --accent: #1890ff;
+  --accent-light: #e6f7ff;
+  --border: #e5e7eb;
+  --success: #52c41a;
+  --warning: #faad14;
+  --danger: #ff4d4f;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--content-bg);
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+/* ====== Sidebar ====== */
+.sidebar {
+  position: fixed; left: 0; top: 0; bottom: 0; width: 240px;
+  background: var(--sidebar-bg);
+  z-index: 1000;
+  display: flex; flex-direction: column;
+  transition: transform 0.3s ease;
+}
+.sidebar-header {
+  padding: 20px 20px;
+  display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.sidebar-logo {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, #1890ff, #0050b3);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.sidebar-logo::after {
+  content: ''; width: 14px; height: 14px;
+  background: var(--sidebar-bg); border-radius: 50%;
+}
+.sidebar-title { color: #fff; font-size: 16px; font-weight: 600; white-space: nowrap; }
+.sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 24px;
+  color: var(--sidebar-text);
+  cursor: pointer; transition: all 0.2s;
+  font-size: 14px; position: relative;
+  border: none; background: none; width: 100%; text-align: left;
+}
+.nav-item:hover { background: var(--sidebar-item); color: #fff; }
+.nav-item.active {
+  background: var(--sidebar-active); color: var(--sidebar-text-active);
+}
+.nav-item.active::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; background: #fff;
+}
+.nav-icon { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.nav-icon svg { width: 18px; height: 18px; fill: currentColor; }
+.nav-arrow { margin-left: auto; font-size: 12px; transition: transform 0.2s; }
+.nav-item.expanded .nav-arrow { transform: rotate(90deg); }
+.sub-menu { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+.sub-menu.open { max-height: 200px; }
+.sub-item {
+  display: block; padding: 8px 56px; color: var(--sidebar-text);
+  font-size: 13px; cursor: pointer; transition: all 0.2s;
+  text-decoration: none;
+}
+.sub-item:hover { color: #fff; background: rgba(255,255,255,0.05); }
+.sub-item.active { color: var(--sidebar-active); }
+.sidebar-footer {
+  padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.08);
+  font-size: 12px; color: var(--text-secondary);
+}
+
+/* ====== Main Content ====== */
+.main {
+  margin-left: 240px;
+  min-height: 100vh;
+  transition: margin-left 0.3s ease;
+}
+.main-header {
+  background: #fff;
+  padding: 0 24px;
+  height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  position: sticky; top: 0; z-index: 100;
+}
+.hamburger {
+  display: none;
+  background: none; border: none; cursor: pointer;
+  font-size: 20px; color: var(--text-primary);
+}
+.page-title { font-size: 16px; font-weight: 600; }
+.header-right { display: flex; align-items: center; gap: 16px; }
+.sync-status {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--text-secondary);
+}
+.sync-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--success); animation: pulse 2s infinite;
+}
+.sync-dot.offline { background: var(--danger); }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+.content { padding: 24px; }
+
+/* ====== View Container ====== */
+.view { display: none; }
+.view.active { display: block; }
+
+/* ====== Stats Cards ====== */
+.stats-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px; margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--card-bg); border-radius: 8px; padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  position: relative; overflow: hidden;
+}
+.stat-card .icon {
+  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+  width: 48px; height: 48px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; opacity: 0.15;
+}
+.stat-card .label { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+.stat-card .value { font-size: 28px; font-weight: 700; }
+.stat-card .trend { font-size: 12px; margin-top: 4px; }
+.stat-card .trend.up { color: var(--success); }
+.stat-card .trend.down { color: var(--danger); }
+
+/* ====== Charts ====== */
+.chart-card {
+  background: var(--card-bg); border-radius: 8px; padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 24px;
+}
+.chart-card-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.chart-card-title::before { content: ''; width: 4px; height: 16px; background: var(--accent); border-radius: 2px; }
+.chart-container { width: 100%; height: 350px; }
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 992px) { .chart-row { grid-template-columns: 1fr; } }
+
+/* ====== Table ====== */
+.table-toolbar {
+  display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;
+}
+.search-input {
+  flex: 1; min-width: 200px; padding: 8px 12px;
+  border: 1px solid var(--border); border-radius: 6px;
+  font-size: 14px; outline: none; transition: border-color 0.2s;
+}
+.search-input:focus { border-color: var(--accent); }
+.select-input {
+  padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 14px; outline: none; background: #fff; cursor: pointer;
+}
+.table-wrap {
+  background: var(--card-bg); border-radius: 8px; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+table { width: 100%; border-collapse: collapse; }
+thead { background: #fafafa; }
+th { padding: 12px 16px; text-align: left; font-size: 13px; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border); white-space: nowrap; }
+td { padding: 10px 16px; font-size: 13px; border-bottom: 1px solid var(--border); }
+tr:hover { background: #fafafa; }
+.vip-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.vip-badge.yes { background: #fff7e6; color: #d48806; }
+.vip-badge.no { background: #f5f5f5; color: #999; }
+.pagination {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 16px;
+}
+.page-btn {
+  padding: 6px 12px; border: 1px solid var(--border); border-radius: 4px;
+  background: #fff; cursor: pointer; font-size: 13px; transition: all 0.2s;
+}
+.page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.page-info { font-size: 13px; color: var(--text-secondary); margin: 0 8px; }
+
+/* ====== Overlay for mobile ====== */
+.overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4); z-index: 999;
+}
+.overlay.show { display: block; }
+
+/* ====== Responsive ====== */
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.show { transform: translateX(0); }
+  .main { margin-left: 0; }
+  .hamburger { display: block; }
+  .content { padding: 16px; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr; }
+}
+
+/* ====== Loading ====== */
+.loading { text-align: center; padding: 40px; color: var(--text-secondary); font-size: 14px; }
+.loading-spinner {
+  width: 32px; height: 32px; border: 3px solid var(--border);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 0.8s linear infinite; margin: 0 auto 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo"></div>
+    <span class="sidebar-title">数据管理后台</span>
+  </div>
+  <nav class="sidebar-nav">
+    <button class="nav-item active" data-view="overview">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg></span>
+      <span>数据概览</span>
+    </button>
+    <button class="nav-item" data-view="customers">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span>
+      <span>客户列表</span>
+    </button>
+    <button class="nav-item" data-view="regions">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></span>
+      <span>区域分布</span>
+    </button>
+  </nav>
+  <div class="sidebar-footer">宜都华晟达洲比亚迪<br>技术支持：Trae AI</div>
+</aside>
+
+<!-- Overlay -->
+<div class="overlay" id="overlay"></div>
+
+<!-- Main Content -->
+<div class="main">
+  <header class="main-header">
+    <button class="hamburger" id="hamburger">&#9776;</button>
+    <span class="page-title" id="pageTitle">数据概览</span>
+    <div class="header-right">
+      <div class="sync-status">
+        <span class="sync-dot" id="syncDot"></span>
+        <span id="syncText">加载中...</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="content">
+    <!-- ====== Overview View ====== -->
+    <div class="view active" id="view-overview">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="icon" style="background:#e6f7ff;color:#1890ff;">&#128101;</div>
+          <div class="label">客户总数</div>
+          <div class="value" id="statTotal">-</div>
+          <div class="trend up" id="statTotalTrend"></div>
+        </div>
+        <div class="stat-card">
+          <div class="icon" style="background:#f6ffed;color:#52c41a;">&#11088;</div>
+          <div class="label">VIP客户</div>
+          <div class="value" id="statVip">-</div>
+          <div class="trend" id="statVipTrend"></div>
+        </div>
+        <div class="stat-card">
+          <div class="icon" style="background:#fff7e6;color:#faad14;">&#128205;</div>
+          <div class="label">覆盖区县</div>
+          <div class="value" id="statDistricts">-</div>
+          <div class="trend" id="statDistrictsTrend"></div>
+        </div>
+        <div class="stat-card">
+          <div class="icon" style="background:#fff0f6;color:#eb2f96;">&#128197;</div>
+          <div class="label">数据月份</div>
+          <div class="value" id="statMonths">-</div>
+          <div class="trend" id="statMonthsTrend"></div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-title">月度客户增长趋势</div>
+        <div class="chart-container" id="trendChart"></div>
+      </div>
+
+      <div class="chart-row">
+        <div class="chart-card">
+          <div class="chart-card-title">区县客户分布</div>
+          <div class="chart-container" id="districtChart"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-card-title">年度对比</div>
+          <div class="chart-container" id="yearChart"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== Customer List View ====== -->
+    <div class="view" id="view-customers">
+      <div class="table-toolbar">
+        <input type="text" class="search-input" id="customerSearch" placeholder="搜索客户姓名、地址...">
+        <select class="select-input" id="filterDistrict">
+          <option value="">全部区县</option>
+        </select>
+        <select class="select-input" id="filterMonth">
+          <option value="">全部月份</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>序号</th>
+              <th>客户姓名</th>
+              <th>区县</th>
+              <th>乡镇/街道</th>
+              <th>详细地址</th>
+              <th>VIP</th>
+              <th>月份</th>
+            </tr>
+          </thead>
+          <tbody id="customerTableBody">
+            <tr><td colspan="7" class="loading">加载中...</td></tr>
+          </tbody>
+        </table>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+
+    <!-- ====== Regions View ====== -->
+    <div class="view" id="view-regions">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="label">核心区域</div>
+          <div class="value" style="font-size:20px;" id="coreRegion">-</div>
+          <div class="trend up" id="coreRegionCount"></div>
+        </div>
+        <div class="stat-card">
+          <div class="label">覆盖率</div>
+          <div class="value" id="coverageRate">-</div>
+          <div class="trend" id="coverageDetail"></div>
+        </div>
+        <div class="stat-card">
+          <div class="label">区域数</div>
+          <div class="value" id="regionCount">-</div>
+          <div class="trend" id="regionDetail"></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">客户分布地图</div>
+        <div class="chart-container" id="regionMap" style="height:500px;"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">区县客户排名</div>
+        <div class="chart-container" id="rankChart" style="height:400px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
