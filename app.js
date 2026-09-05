@@ -21,7 +21,6 @@ let data = null;
 let isAdmin = false;
 let detectedDevice = 'desktop';
 let currentMonth = 'all';
-let currentDrillDistrict = ''; // Track which district user drilled into
 let pickerYear = 2026;
 let pickerMode = 'month'; // 'month' or 'year'
 let yearPageStart = 2024; // for year mode pagination (shows 12 years at a time)
@@ -969,7 +968,7 @@ function mobileBackToOverview() {
     return;
   }
   // Otherwise go back to city overview
-  currentDrillDistrict = '';
+  currentDrillDistrict = null;
   document.getElementById('mobileMapTitle').textContent = '宜昌市客户分布 - ' + getRangeLabel();
   document.getElementById('mobileBackBtn').style.display = 'none';
   initMobile();
