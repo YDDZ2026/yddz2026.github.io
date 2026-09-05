@@ -329,7 +329,6 @@ function setSyncStatus(s) {
 
 // ========== GitHub Backend ==========
 let lastCloudUpdate = '';
-let isInitialLoad = true;
 
 async function loadFromGitHub() {
   if (!GITHUB_READ_ENABLED) { setSyncStatus('offline'); return; }
@@ -348,15 +347,12 @@ async function loadFromGitHub() {
         const info = { name: cloudData.updated_by || '系统', time: cloudData.updated_at ? new Date(cloudData.updated_at).toLocaleString('zh-CN', {hour12: false}) : '' };
         localStorage.setItem(UPDATE_KEY, JSON.stringify(info));
         updateLastUpdate(info);
-        // Skip re-render on initial load (switchView already rendered)
-        if (!isInitialLoad) {
-          refreshCurrentView();
-        }
+        // Always refresh view when data changed (including initial load)
+        refreshCurrentView();
       }
     }
     setSyncStatus('online');
   } catch(e) { console.error('Load failed:', e); setSyncStatus('offline'); }
-  isInitialLoad = false;
 }
 
 async function saveToGitHub(updater) {
@@ -1548,9 +1544,14 @@ function updateAddressItem() {
   // Exit edit mode
   cancelEdit();
 
+  // Save to localStorage immediately
+  const slimData = { monthlyData: data.monthlyData, addressDetails: data.addressDetails || {} };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(slimData));
+
   // Refresh the view
   onUploadMonthChange();
-  showToast('客户信息已更新');
+  refreshCurrentView();
+  showToast('客户信息已更新，请点击"提交数据"同步到云端');
 }
 
 function cancelEdit() {
@@ -1626,8 +1627,11 @@ function addAddressItem() {
 
   document.getElementById('addrDetail').value = '';
   document.getElementById('addrName').value = '';
+  // Save to localStorage immediately
+  const slimData = { monthlyData: data.monthlyData, addressDetails: data.addressDetails || {} };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(slimData));
   onUploadMonthChange();
-  showToast('已添加客户地址');
+  showToast('已添加客户地址，请点击"提交数据"同步到云端');
 }
 
 function renderAddressList(month) {
@@ -1675,14 +1679,18 @@ function removeAddressItem(index) {
       if (item.vip === 1) data.monthlyData[month].streetData[item.district][item.street].vip++;
     });
   }
+  // Save to localStorage immediately
+  const slimData = { monthlyData: data.monthlyData, addressDetails: data.addressDetails || {} };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(slimData));
   onUploadMonthChange();
-  showToast('已删除');
+  showToast('已删除，请点击"提交数据"同步到云端');
 }
 
 function submitData() {
   const userName = document.getElementById('userName').value.trim() || '匿名用户';
   const month = getCurrentMonth();
 
+  // Read table inputs for district data (allows manual adjustment)
   document.querySelectorAll('#uploadTable input').forEach(input => {
     const district = input.dataset.district;
     const field = input.dataset.field;
@@ -1691,6 +1699,23 @@ function submitData() {
     if (!data.monthlyData[month].districtData[district]) data.monthlyData[month].districtData[district] = { total: 0, vip: 0 };
     data.monthlyData[month].districtData[district][field] = value;
   });
+
+  // Also recalculate streetData from addressDetails to ensure consistency
+  if (data.addressDetails[month] && data.addressDetails[month].length > 0) {
+    if (!data.monthlyData[month].streetData) data.monthlyData[month].streetData = {};
+    const names = data.districtNames || [];
+    names.forEach(d => {
+      if (!data.monthlyData[month].streetData[d]) data.monthlyData[month].streetData[d] = {};
+      (data.streetsByDistrict[d] || []).forEach(s => {
+        if (!data.monthlyData[month].streetData[d][s]) data.monthlyData[month].streetData[d][s] = { total: 0, vip: 0 };
+      });
+    });
+    data.addressDetails[month].forEach(item => {
+      if (!data.monthlyData[month].streetData[item.district]) data.monthlyData[month].streetData[item.district] = {};
+      if (!data.monthlyData[month].streetData[item.district][item.street]) data.monthlyData[month].streetData[item.district][item.street] = { total: 0, vip: 0 };
+      // Don't double count - streetData is already maintained by addAddressItem etc.
+    });
+  }
 
   saveData(userName);
   showToast('数据提交成功！正在同步到所有设备...');
