@@ -2023,8 +2023,6 @@ document.getElementById('fullscreenBtn').addEventListener('click', () => {
   if (!document.fullscreenElement) document.documentElement.requestFullscreen();
   else document.exitFullscreen();
 });
-document.getElementById('submitBtn').addEventListener('click', submitData);
-document.getElementById('resetBtn').addEventListener('click', resetData);
 
 detectedDevice = detectDevice();
 const hash = location.hash.replace('#', '') || 'tv';
