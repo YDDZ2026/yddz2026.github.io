@@ -21,6 +21,7 @@ let data = null;
 let isAdmin = false;
 let detectedDevice = 'desktop';
 let currentMonth = 'all';
+let currentDrillDistrict = ''; // Track which district user drilled into
 let pickerYear = 2026;
 let pickerMode = 'month'; // 'month' or 'year'
 let yearPageStart = 2024; // for year mode pagination (shows 12 years at a time)
@@ -842,6 +843,7 @@ function renderMobileRankList() {
 }
 
 function showMobileDetail(districtName) {
+  currentDrillDistrict = districtName;
   document.getElementById('mobileMapTitle').textContent = '客户分布 - ' + districtName + ' - ' + getRangeLabel();
   document.getElementById('mobileBackBtn').style.display = 'inline-block';
 
@@ -868,6 +870,13 @@ function showMobileDetail(districtName) {
         data: streets.map(s => ({ name: s.name, value: s.value, vip: s.vip, itemStyle: { areaColor: getColorForValue(s.value, maxVal) } }))
       }]
     }, true);
+    // Re-register click handler: clicking a street shows street customer detail
+    mobileChart.off('click');
+    mobileChart.on('click', function(params) {
+      if (params.name) {
+        showStreetCustomerDetail(districtName, params.name);
+      }
+    });
   }
 
   const dd = getRangeDistrictData();
@@ -901,7 +910,7 @@ function showMobileDetail(districtName) {
     </div>
     <div style="font-size:13px;font-weight:600;margin:12px 0 8px;color:var(--mobile-text);">街道客户分布</div>
     <div class="mobile-street-list">
-      ${streetList.length > 0 ? streetList.map(s => `<div class="mobile-street-row"><span class="name">${s.name}</span><span class="val">${s.total}户 (VIP ${s.vip})</span></div>`).join('') : '<div style="color:#9ca3af;font-size:13px;text-align:center;padding:16px;">暂无街道数据</div>'}
+      ${streetList.length > 0 ? streetList.map(s => `<div class="mobile-street-row" style="cursor:pointer;" onclick="showStreetCustomerDetail('${districtName}','${s.name}')"><span class="name">${s.name}</span><span class="val">${s.total}户 (VIP ${s.vip})</span></div>`).join('') : '<div style="color:#9ca3af;font-size:13px;text-align:center;padding:16px;">暂无街道数据</div>'}
     </div>
     <div style="font-size:13px;font-weight:600;margin:16px 0 8px;color:var(--mobile-text);">客户明细 (${customers.length} 户)</div>
     <div class="mobile-street-list" style="max-height:400px;overflow-y:auto;">
@@ -910,7 +919,57 @@ function showMobileDetail(districtName) {
   `;
 }
 
+// Show customer detail for a specific street within a district
+function showStreetCustomerDetail(districtName, streetName) {
+  // Highlight the clicked street on the map
+  mobileChart.dispatchAction({ type: 'highlight', name: streetName });
+  
+  document.getElementById('mobileMapTitle').textContent = streetName + ' - 客户明细 - ' + getRangeLabel();
+
+  // Get street data
+  const sd = getRangeStreetData(districtName);
+  const sInfo = sd[streetName] || {total:0, vip:0};
+
+  // Get customers in this specific street
+  const allCustomers = getRangeCustomerList(districtName);
+  const streetCustomers = allCustomers.filter(c => c.street === streetName);
+
+  let customerHtml = '';
+  streetCustomers.forEach(c => {
+    const vipBadge = c.vip === 1 ? '<span style="font-size:10px;color:#10b981;font-weight:700;border:1px solid rgba(16,185,129,0.3);border-radius:4px;padding:1px 6px;">VIP</span>' : '';
+    const monthLabel = c.month ? c.month.replace('-', '年') + '月' : '';
+    customerHtml += `<div class="mobile-street-row"><div style="flex:1;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="name" style="font-weight:600;">${c.name || '未署名'}</span>
+        ${vipBadge}
+      </div>
+      <div style="font-size:11px;color:var(--mobile-dim);margin-top:2px;">${c.detail || ''}</div>
+      <div style="font-size:10px;color:#9ca3af;margin-top:1px;">${monthLabel}</div>
+    </div></div>`;
+  });
+
+  document.getElementById('mobilePanelTitle').textContent = streetName + ' - 客户明细 - ' + getRangeLabel();
+  document.getElementById('mobileRankList').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+      <div class="mobile-detail-stat" style="background:var(--mobile-bg);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:10px;color:var(--mobile-dim);">客户总数</div><div style="font-size:16px;font-weight:700;color:#3b82f6">${sInfo.total}</div></div>
+      <div class="mobile-detail-stat" style="background:var(--mobile-bg);border-radius:8px;padding:8px;text-align:center;"><div style="font-size:10px;color:var(--mobile-dim);">VIP客户</div><div style="font-size:16px;font-weight:700;color:#10b981">${sInfo.vip}</div></div>
+    </div>
+    <div style="font-size:13px;font-weight:600;margin:12px 0 8px;color:var(--mobile-text);">客户明细 (${streetCustomers.length} 户)</div>
+    <div class="mobile-street-list" style="max-height:400px;overflow-y:auto;">
+      ${customerHtml || '<div style="color:#9ca3af;font-size:13px;text-align:center;padding:16px;">暂无客户记录</div>'}
+    </div>
+  `;
+}
+
 function mobileBackToOverview() {
+  // If currently viewing a street detail, go back to district view
+  const title = document.getElementById('mobileMapTitle').textContent;
+  if (currentDrillDistrict && !title.includes('客户分布 - ' + currentDrillDistrict)) {
+    showMobileDetail(currentDrillDistrict);
+    return;
+  }
+  // Otherwise go back to city overview
+  currentDrillDistrict = '';
   document.getElementById('mobileMapTitle').textContent = '宜昌市客户分布 - ' + getRangeLabel();
   document.getElementById('mobileBackBtn').style.display = 'none';
   initMobile();
