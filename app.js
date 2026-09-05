@@ -995,6 +995,207 @@ function onAddrDistrictChange() {
   streetSel.innerHTML = '<option value="">选择街道/乡镇</option>' + streets.map(s => `<option value="${s}">${s}</option>`).join('');
 }
 
+// ========== ID Card Smart Recognition ==========
+function parseAndFillIdCard() {
+  const rawText = document.getElementById('idCardInput').value.trim();
+  if (!rawText) { showToast('请先粘贴身份证信息'); return; }
+
+  // Normalize: unify colons, remove zero-width spaces
+  const text = rawText.replace(/：/g, ':').replace(/[\u3000]/g, ' ');
+  // Concatenate all text (remove newlines) for regex matching
+  const fullText = text.replace(/[\n\r]+/g, '');
+
+  // --- 1. Extract ID number (18 digits, last may be X) ---
+  let idNumber = '';
+  const idMatch = fullText.match(/\d{17}[\dXx]/);
+  if (idMatch) idNumber = idMatch[0];
+
+  // --- 2. Extract name (2-4 Chinese chars after 姓名, before keyword/digit/space/end) ---
+  let name = '';
+  const nameMatch = fullText.match(/姓名[:\s]*( [\u4e00-\u9fa5]{2,4})(?=性别|民族|出生|住址|公民|号码|签发|有效|\d|\s|$)/);
+  if (nameMatch) {
+    name = nameMatch[1].trim();
+  } else {
+    // Fallback: take 2-4 chars after 姓名
+    const simpleMatch = fullText.match(/姓名[:\s]*([\u4e00-\u9fa5]{2,4})/);
+    if (simpleMatch) name = simpleMatch[1];
+  }
+
+  // --- 3. Extract gender ---
+  let gender = '';
+  const genderMatch = fullText.match(/性别[:\s]*([男女])/);
+  if (genderMatch) gender = genderMatch[1];
+
+  // Also infer gender from ID number (17th digit: odd=male, even=female)
+  if (!gender && idNumber && idNumber.length === 18) {
+    gender = parseInt(idNumber[16]) % 2 === 0 ? '女' : '男';
+  }
+
+  // --- 4. Extract birth date ---
+  let birthMonth = '';
+  const birthMatch = fullText.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+  if (birthMatch) {
+    birthMonth = birthMatch[1] + '-' + birthMatch[2].padStart(2, '0');
+  } else if (idNumber && idNumber.length === 18) {
+    // Extract from ID number: digits 7-14 are YYYYMMDD
+    birthMonth = idNumber.substring(6, 10) + '-' + idNumber.substring(10, 12);
+  }
+
+  // --- 5. Extract address ---
+  // Strategy: remove all known values and keyword labels, what remains is the address
+  let cleaned = fullText;
+
+  // Remove ID number
+  if (idNumber) cleaned = cleaned.replace(idNumber, '');
+
+  // Remove name and label
+  if (name) cleaned = cleaned.replace('姓名', '').replace(name, '');
+  else cleaned = cleaned.replace(/姓名[:\s]*/g, '');
+
+  // Remove birth date
+  if (birthMatch) cleaned = cleaned.replace(birthMatch[0], '');
+
+  // Remove any other date patterns
+  cleaned = cleaned.replace(/\d{4}年\d{1,2}月\d{1,2}日/g, '');
+  cleaned = cleaned.replace(/\d{4}-\d{1,2}-\d{1,2}/g, '');
+
+  // Remove gender and ethnicity
+  cleaned = cleaned.replace(/性别[:\s]*[男女]/g, '');
+  cleaned = cleaned.replace(/民族[:\s]*[\u4e00-\u9fa5]{1,2}/g, '');
+
+  // Remove keyword labels
+  cleaned = cleaned.replace(/公民身份号码/g, '');
+  cleaned = cleaned.replace(/身份号码/g, '');
+  cleaned = cleaned.replace(/号码/g, '');
+  cleaned = cleaned.replace(/出生/g, '');
+  cleaned = cleaned.replace(/住址/g, '');
+  cleaned = cleaned.replace(/签发机关/g, '');
+  cleaned = cleaned.replace(/有效期限/g, '');
+
+  // Remove any remaining digits and punctuation
+  cleaned = cleaned.replace(/[\d\-\.\/年月日]/g, '');
+
+  // Remove whitespace
+  cleaned = cleaned.replace(/\s+/g, '');
+
+  let address = cleaned.trim();
+
+  // Fallback: if address empty, try extracting between 住址 and 公民身份号码
+  if (!address) {
+    const addrStart = fullText.indexOf('住址');
+    const idStart = fullText.indexOf('公民身份');
+    if (addrStart >= 0) {
+      const end = idStart > addrStart ? idStart : fullText.length;
+      address = fullText.substring(addrStart + 2, end).replace(/[\s\n\r]/g, '').replace(/[\d\-\.\/年月日]/g, '').trim();
+    }
+  }
+
+  // --- 6. Parse district and street from address ---
+  const districtNames = data.districtNames || [];
+  let matchedDistrict = '';
+  let remainingAddr = address;
+
+  // Match known district
+  for (const d of districtNames) {
+    if (address.includes(d)) {
+      matchedDistrict = d;
+      remainingAddr = address.substring(address.indexOf(d) + d.length);
+      break;
+    }
+  }
+
+  // Fallback: extract by pattern (XX市/XX区/XX县)
+  if (!matchedDistrict) {
+    remainingAddr = address.replace(/^.*?省/, '');
+    const cityMatch = remainingAddr.match(/([\u4e00-\u9fa5]{2,4}(?:市|区|县))/);
+    if (cityMatch) {
+      matchedDistrict = cityMatch[1];
+      remainingAddr = remainingAddr.substring(remainingAddr.indexOf(cityMatch[1]) + cityMatch[1].length);
+    }
+  }
+
+  // Match known street
+  const streets = matchedDistrict ? ((data.streetsByDistrict || {})[matchedDistrict] || []) : [];
+  let matchedStreet = '';
+  let detailAddr = remainingAddr;
+
+  for (const s of streets) {
+    if (remainingAddr.includes(s)) {
+      matchedStreet = s;
+      detailAddr = remainingAddr.substring(remainingAddr.indexOf(s) + s.length);
+      break;
+    }
+  }
+
+  // Fallback: extract street by pattern (XX镇/XX乡/XX街道)
+  if (!matchedStreet && remainingAddr) {
+    const townMatch = remainingAddr.match(/([\u4e00-\u9fa5]{2,6}(?:镇|乡|街道))/);
+    if (townMatch) {
+      matchedStreet = townMatch[1];
+      detailAddr = remainingAddr.substring(remainingAddr.indexOf(townMatch[1]) + townMatch[1].length);
+    }
+  }
+
+  // --- 7. Fill the form ---
+  if (name) {
+    const nameInput = document.getElementById('addrName');
+    if (nameInput) nameInput.value = name;
+  }
+
+  if (matchedDistrict) {
+    const distSel = document.getElementById('addrDistrict');
+    if (distSel) {
+      let found = false;
+      for (const opt of distSel.options) {
+        if (opt.value === matchedDistrict) { found = true; break; }
+      }
+      if (found) {
+        distSel.value = matchedDistrict;
+        onAddrDistrictChange();
+      }
+    }
+  }
+
+  if (matchedStreet) {
+    // Wait for street dropdown to populate (onAddrDistrictChange is synchronous)
+    setTimeout(() => {
+      const streetSel = document.getElementById('addrStreet');
+      if (streetSel) {
+        let found = false;
+        for (const opt of streetSel.options) {
+          if (opt.value === matchedStreet || opt.textContent === matchedStreet) { found = true; break; }
+        }
+        if (found) {
+          streetSel.value = matchedStreet;
+        } else {
+          // Add as custom option
+          const opt = document.createElement('option');
+          opt.value = matchedStreet;
+          opt.textContent = matchedStreet + ' (自动识别)';
+          streetSel.appendChild(opt);
+          streetSel.value = matchedStreet;
+        }
+      }
+    }, 50);
+  }
+
+  if (detailAddr) {
+    const detailInput = document.getElementById('addrDetail');
+    if (detailInput) detailInput.value = detailAddr;
+  }
+
+  // Clear the textarea
+  document.getElementById('idCardInput').value = '';
+
+  // Show result
+  let parts = [];
+  if (name) parts.push('姓名:' + name);
+  if (matchedDistrict) parts.push('区县:' + matchedDistrict);
+  if (matchedStreet) parts.push('街道:' + matchedStreet);
+  if (detailAddr) parts.push('地址:' + detailAddr);
+  showToast('识别成功 ' + parts.join(' | '));
+}
+
 function addNewMonth() {
   const next = getNextMonth();
   if (data.monthlyData[next]) { showToast(getMonthLabel(next) + ' 已存在'); return; }
