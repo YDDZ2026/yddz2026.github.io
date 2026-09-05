@@ -509,7 +509,7 @@ setTimeout(function(){
     <div style="margin-bottom:16px;padding:14px;background:#f0f7ff;border:1.5px solid #bae6fd;border-radius:12px;">
       <div style="font-size:14px;font-weight:600;margin-bottom:6px;color:#0369a1;">🪪 身份证智能识别</div>
       <div style="font-size:11px;color:#475569;margin-bottom:10px;">复制粘贴客户身份证信息，系统自动提取姓名、住址等填入下方表单</div>
-      <textarea id="idCardInput" rows="6" placeholder="在此粘贴客户身份证信息...&#10;例如：&#10;姓名袁世香&#10;1970年11月16日湖北省宜都市姚家店镇&#10;性别女民族汉&#10;出生&#10;住址&#10;公民身份号码422722197011161626" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;resize:vertical;font-family:inherit;line-height:1.5;"></textarea>
+      <textarea id="idCardInput" rows="6" placeholder="在此粘贴客户身份证信息...&#10;例如：&#10;姓名张三&#10;1990年1月1日XX省XX市XX区&#10;性别男民族汉&#10;出生&#10;住址XX市XX区XX街道XX号&#10;公民身份号码420XXXXXXXXXXXXXXX" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;resize:vertical;font-family:inherit;line-height:1.5;"></textarea>
       <div style="display:flex;gap:8px;margin-top:8px;">
         <button class="btn-primary" style="padding:8px 24px;font-size:13px;" onclick="parseAndFillIdCard()">智能识别并填充</button>
         <button class="btn-secondary" style="padding:8px 16px;font-size:13px;" onclick="document.getElementById('idCardInput').value=''">清空</button>
