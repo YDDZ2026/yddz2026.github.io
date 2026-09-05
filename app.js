@@ -1012,7 +1012,7 @@ function parseAndFillIdCard() {
 
   // --- 2. Extract name (2-4 Chinese chars after 姓名, before keyword/digit/space/end) ---
   let name = '';
-  const nameMatch = fullText.match(/姓名[:\s]*( [\u4e00-\u9fa5]{2,4})(?=性别|民族|出生|住址|公民|号码|签发|有效|\d|\s|$)/);
+  const nameMatch = fullText.match(/姓名[:\s]*([\u4e00-\u9fa5]{2,4})(?=性别|民族|出生|住址|公民|号码|签发|有效|\d|\s|$)/);
   if (nameMatch) {
     name = nameMatch[1].trim();
   } else {
