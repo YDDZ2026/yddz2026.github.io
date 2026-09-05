@@ -2049,29 +2049,20 @@ window.addEventListener('resize', () => {
 });
 
 // ========== Twemoji: Convert emoji to SVG images for cross-platform support ==========
-function loadTwemoji() {
-  if (typeof twemoji !== 'undefined') { parseEmojis(); return; }
-  const s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js';
-  s.onload = function() {
-    parseEmojis();
-    // Set up observer after library is loaded
-    if (typeof MutationObserver !== 'undefined') {
-      window._emojiObserver = new MutationObserver(() => {
-        if (window._emojiTimer) clearTimeout(window._emojiTimer);
-        window._emojiTimer = setTimeout(parseEmojis, 150);
-      });
-      window._emojiObserver.observe(document.body, { childList: true, subtree: true });
-    }
-  };
-  s.onerror = function() { console.log('Twemoji failed to load, emojis may not display'); };
-  document.head.appendChild(s);
-}
-
 function parseEmojis() {
   if (typeof twemoji === 'undefined') return;
   twemoji.parse(document.body, { folder: 'svg', ext: '.svg', base: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/' });
 }
 
-// Load Twemoji after page is ready
-setTimeout(loadTwemoji, 500);
+// Parse on load and watch for DOM changes
+window.addEventListener('load', function() {
+  setTimeout(function() {
+    parseEmojis();
+    if (typeof MutationObserver !== 'undefined') {
+      var obs = new MutationObserver(function() {
+        setTimeout(parseEmojis, 100);
+      });
+      obs.observe(document.body, { childList: true, subtree: true });
+    }
+  }, 200);
+});
