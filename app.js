@@ -322,9 +322,17 @@ function checkAdminAuth() {
 // ========== Sync Status ==========
 function setSyncStatus(s) {
   const dot = document.getElementById('syncDot'), text = document.getElementById('syncStatus');
-  if (!dot || !text) return;
-  dot.className = 'dot ' + s;
-  text.textContent = s === 'online' ? '已同步' : s === 'offline' ? '离线模式' : '连接中...';
+  const dotInline = document.getElementById('syncDotInline'), textInline = document.getElementById('syncTextInline');
+  const badge = document.getElementById('syncBadge');
+  if (dot) dot.className = 'dot ' + s;
+  if (text) text.textContent = s === 'online' ? '已同步' : s === 'offline' ? '离线模式' : '连接中...';
+  if (dotInline) { dotInline.style.background = s === 'online' ? '#10b981' : s === 'offline' ? '#ef4444' : '#f59e0b'; }
+  if (textInline) textInline.textContent = s === 'online' ? '自动同步' : s === 'offline' ? '离线模式' : '同步中...';
+  if (badge) {
+    if (s === 'online') { badge.style.background = '#f0fdf4'; badge.style.color = '#15803d'; }
+    else if (s === 'offline') { badge.style.background = '#fef2f2'; badge.style.color = '#dc2626'; }
+    else { badge.style.background = '#fffbeb'; badge.style.color = '#d97706'; }
+  }
 }
 
 // ========== GitHub Backend ==========
@@ -1041,24 +1049,65 @@ function mobileBackToOverview() {
 
 // ========== Upload View ==========
 function initUpload() {
-  const savedToken = localStorage.getItem('gh_token') || '';
-  const tokenInput = document.getElementById('ghTokenInput');
-  if (tokenInput) {
-    tokenInput.value = savedToken;
-    tokenInput.addEventListener('input', function() {
-      localStorage.setItem('gh_token', this.value.trim());
-      GITHUB_CONFIG.token = this.value.trim();
-    });
-  }
-  // Ensure current month exists in data
   ensureCurrentMonth();
-  // Show current month label
-  const monthLabel = document.getElementById('currentMonthLabel');
-  if (monthLabel) monthLabel.textContent = getMonthLabel(getCurrentMonth());
-  onUploadMonthChange();
   populateDistrictSelect();
+  renderQuickStats();
+  renderCustomerList();
   const info = localStorage.getItem(UPDATE_KEY);
   if (info) { try { updateLastUpdate(JSON.parse(info)); } catch(e) {} }
+}
+
+// Auto-sync: saves to localStorage immediately, syncs to GitHub with debounce
+let syncTimer = null;
+function autoSync(updater) {
+  // Save to localStorage immediately
+  const slimData = { monthlyData: data.monthlyData, addressDetails: data.addressDetails || {} };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(slimData));
+  // Broadcast to other tabs
+  const info = { name: updater || '系统', time: new Date().toLocaleString('zh-CN', {hour12: false}) };
+  localStorage.setItem(UPDATE_KEY, JSON.stringify(info));
+  bc.postMessage({type: 'data_update', data: data, update: info});
+  // Refresh views
+  renderQuickStats();
+  renderCustomerList();
+  refreshCurrentView();
+  // Debounced GitHub sync (2 second delay to avoid rapid-fire API calls)
+  if (syncTimer) clearTimeout(syncTimer);
+  setSyncStatus('connecting');
+  syncTimer = setTimeout(() => {
+    saveToGitHub(updater || '系统');
+  }, 1500);
+}
+
+function renderQuickStats() {
+  const month = getCurrentMonth();
+  const dd = getMonthDistrictData(month);
+  const names = data.districtNames || [];
+  let totalAll = 0, vipAll = 0;
+  names.forEach(n => { const d = dd[n] || {total:0,vip:0}; totalAll += d.total; vipAll += d.vip; });
+  const otherD = dd['其他'] || {total:0,vip:0};
+  totalAll += otherD.total; vipAll += otherD.vip;
+  
+  const el = document.getElementById('quickStats');
+  if (!el) return;
+  el.innerHTML = `
+    <div style="flex:1;padding:12px 16px;background:#eff6ff;border-radius:10px;text-align:center;">
+      <div style="font-size:24px;font-weight:700;color:#3b82f6;">${totalAll}</div>
+      <div style="font-size:11px;color:#6b7280;">总客户</div>
+    </div>
+    <div style="flex:1;padding:12px 16px;background:#f0fdf4;border-radius:10px;text-align:center;">
+      <div style="font-size:24px;font-weight:700;color:#10b981;">${vipAll}</div>
+      <div style="font-size:11px;color:#6b7280;">VIP客户</div>
+    </div>
+    <div style="flex:1;padding:12px 16px;background:#fffbeb;border-radius:10px;text-align:center;">
+      <div style="font-size:24px;font-weight:700;color:#f59e0b;">${totalAll - vipAll}</div>
+      <div style="font-size:11px;color:#6b7280;">普通客户</div>
+    </div>
+    <div style="flex:1;padding:12px 16px;background:#f5f3ff;border-radius:10px;text-align:center;">
+      <div style="font-size:14px;font-weight:600;color:#7c3aed;">${month.replace('-', '年')}月</div>
+      <div style="font-size:11px;color:#6b7280;">当前月份</div>
+    </div>
+  `;
 }
 
 // Get current month string in YYYY-MM format
@@ -1087,49 +1136,8 @@ function ensureCurrentMonth() {
 }
 
 function onUploadMonthChange() {
-  const month = getCurrentMonth();
-  const dd = getMonthDistrictData(month);
-  const names = data.districtNames || [];
-
-  let html = `<table><thead><tr><th>区县</th><th>客户总数</th><th>VIP客户</th><th>普通客户</th><th>VIP占比</th></tr></thead><tbody>`;
-  // Sort by name for consistency
-  names.forEach(name => {
-    const d = dd[name] || {total:0, vip:0};
-    const normal = d.total - d.vip;
-    const rate = d.total>0?(d.vip/d.total*100).toFixed(1):'0.0';
-    html += `<tr>
-      <td style="font-weight:600">${name}</td>
-      <td><input type="number" min="0" value="${d.total}" data-district="${name}" data-field="total"></td>
-      <td><input type="number" min="0" value="${d.vip}" data-district="${name}" data-field="vip"></td>
-      <td class="calc" id="calc-${name}">${normal}</td>
-      <td class="calc" id="rate-${name}">${rate}%</td>
-    </tr>`;
-  });
-  // Add "其他" row for customers outside Yichang
-  const otherD = dd['其他'] || {total:0, vip:0};
-  const otherNormal = otherD.total - otherD.vip;
-  const otherRate = otherD.total>0?(otherD.vip/otherD.total*100).toFixed(1):'0.0';
-  html += `<tr style="background:#fffbeb;">
-    <td style="font-weight:600;color:#92400e">其他 (市外)</td>
-    <td><input type="number" min="0" value="${otherD.total}" data-district="其他" data-field="total"></td>
-    <td><input type="number" min="0" value="${otherD.vip}" data-district="其他" data-field="vip"></td>
-    <td class="calc" id="calc-其他">${otherNormal}</td>
-    <td class="calc" id="rate-其他">${otherRate}%</td>
-  </tr>`;
-  html += '</tbody></table>';
-  document.getElementById('uploadTable').innerHTML = html;
-
-  document.querySelectorAll('#uploadTable input').forEach(input => {
-    input.addEventListener('input', function() {
-      const district = this.dataset.district;
-      const row = this.closest('tr');
-      const total = parseInt(row.querySelector('[data-field="total"]').value) || 0;
-      const vip = parseInt(row.querySelector('[data-field="vip"]').value) || 0;
-      document.getElementById('calc-'+district).textContent = Math.max(0, total-vip);
-      document.getElementById('rate-'+district).textContent = (total>0?(vip/total*100).toFixed(1):'0.0') + '%';
-    });
-  });
-  renderAddressList(month);
+  renderQuickStats();
+  renderCustomerList();
 }
 
 function populateDistrictSelect() {
@@ -1415,42 +1423,7 @@ let editingMonth = null;
 let editingIndex = -1;
 
 function searchExistingCustomer() {
-  const keyword = (document.getElementById('customerSearchInput')?.value || '').trim();
-  const resultsDiv = document.getElementById('searchResults');
-  if (!resultsDiv) return;
-
-  if (!keyword) {
-    resultsDiv.innerHTML = '';
-    return;
-  }
-
-  // Search across ALL months
-  const matches = [];
-  for (const [month, items] of Object.entries(data.addressDetails || {})) {
-    if (!Array.isArray(items)) continue;
-    items.forEach((item, i) => {
-      if (item.name && item.name.includes(keyword)) {
-        matches.push({ ...item, month, index: i });
-      }
-    });
-  }
-
-  if (matches.length === 0) {
-    resultsDiv.innerHTML = '<div style="text-align:center;color:#9ca3af;font-size:13px;padding:12px;">未找到匹配的客户</div>';
-    return;
-  }
-
-  resultsDiv.innerHTML = matches.map(m => `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:6px;cursor:pointer;background:#f9fafb;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#f9fafb'" onclick="editAddressItem('${m.month}', ${m.index})">
-      <div>
-        <span style="font-weight:600;color:#1f2937;">${m.name}</span>
-        <span style="color:#6b7280;font-size:12px;margin-left:8px;">${m.district} · ${m.street} · ${m.detail || ''}</span>
-        ${m.vip === 1 ? '<span style="font-size:10px;color:#10b981;font-weight:700;border:1px solid rgba(16,185,129,0.3);border-radius:4px;padding:1px 6px;margin-left:6px;">VIP</span>' : ''}
-        <span style="font-size:11px;color:#9ca3af;margin-left:6px;">${m.month.replace('-', '年')}月</span>
-      </div>
-      <span style="color:#3b82f6;font-size:13px;">编辑 →</span>
-    </div>
-  `).join('');
+  renderCustomerList();
 }
 
 function editAddressItem(month, index) {
@@ -1497,10 +1470,10 @@ function editAddressItem(month, index) {
 
   // Clear search results
   document.getElementById('customerSearchInput').value = '';
-  document.getElementById('searchResults').innerHTML = '';
+  renderCustomerList();
 
   // Scroll to form
-  document.querySelector('.address-input-row').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  document.querySelector('#addrDetail').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function updateAddressItem() {
@@ -1546,14 +1519,8 @@ function updateAddressItem() {
   // Exit edit mode
   cancelEdit();
 
-  // Save to localStorage immediately
-  const slimData = { monthlyData: data.monthlyData, addressDetails: data.addressDetails || {} };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(slimData));
-
-  // Refresh the view
-  onUploadMonthChange();
-  refreshCurrentView();
-  showToast('客户信息已更新，请点击"提交数据"同步到云端');
+  autoSync('编辑客户');
+  showToast('客户信息已更新，数据自动同步中');
 }
 
 function cancelEdit() {
@@ -1629,11 +1596,8 @@ function addAddressItem() {
 
   document.getElementById('addrDetail').value = '';
   document.getElementById('addrName').value = '';
-  // Save to localStorage immediately
-  const slimData = { monthlyData: data.monthlyData, addressDetails: data.addressDetails || {} };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(slimData));
-  onUploadMonthChange();
-  showToast('已添加客户地址，请点击"提交数据"同步到云端');
+  autoSync('添加客户');
+  showToast('客户已添加，数据自动同步中');
 }
 
 // ========== Excel Batch Import ==========
@@ -1903,15 +1867,12 @@ function confirmExcelImport(count) {
     imported++;
   });
 
-  // Save to localStorage
-  const slimData = { monthlyData: data.monthlyData, addressDetails: data.addressDetails || {} };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(slimData));
-  onUploadMonthChange();
+  autoSync('Excel导入');
 
   // Reset UI
   const statusEl = document.getElementById('importStatus');
   const previewEl = document.getElementById('importPreview');
-  statusEl.textContent = `✅ 成功导入 ${imported} 条客户数据！请点击"提交数据"同步到云端`;
+  statusEl.textContent = `✅ 成功导入 ${imported} 条客户数据！数据已自动同步`;
   statusEl.style.color = '#10b981';
   previewEl.style.display = 'none';
   window._pendingExcelImport = null;
@@ -1927,93 +1888,63 @@ function cancelExcelImport() {
   window._pendingExcelImport = null;
 }
 
-function renderAddressList(month) {
+function renderCustomerList() {
   const list = document.getElementById('addressList');
   if (!list) return;
-  const items = (data.addressDetails[month] || []);
+  const keyword = (document.getElementById('customerSearchInput')?.value || '').trim();
+  const month = getCurrentMonth();
+  const countEl = document.getElementById('customerCount');
+  
+  // Search across ALL months if keyword is present, otherwise show current month
+  let items = [];
+  if (keyword) {
+    for (const [m, arr] of Object.entries(data.addressDetails || {})) {
+      if (!Array.isArray(arr)) continue;
+      arr.forEach((item, i) => {
+        if (item.name && item.name.includes(keyword)) {
+          items.push({ ...item, month: m, index: i });
+        }
+      });
+    }
+  } else {
+    items = (data.addressDetails[month] || []).map((item, i) => ({ ...item, month, index: i }));
+  }
+  
+  if (countEl) countEl.textContent = `(${items.length}条)`;
+  
   if (items.length === 0) {
-    list.innerHTML = '<div style="text-align:center;color:#9ca3af;font-size:13px;padding:16px;">暂无客户地址详情，添加后自动汇总到上方表格</div>';
+    list.innerHTML = `<div style="text-align:center;color:#9ca3af;font-size:13px;padding:24px;">${keyword ? '未找到匹配的客户' : '暂无客户，请在上方添加'}</div>`;
     return;
   }
-  list.innerHTML = items.map((item, i) => `
-    <div class="address-item">
-      <span><b>${item.district}</b> · ${item.street} · ${item.detail}${item.name ? ' · ' + item.name : ''} ${item.vip === 1 ? '<span style="color:#10b981">VIP</span>' : ''}</span>
-      <div style="display:flex;gap:6px;">
-        <button class="del-btn" style="color:#f59e0b;" onclick="editAddressItem('${month}', ${i})">编辑</button>
-        <button class="del-btn" onclick="removeAddressItem(${i})">删除</button>
+  list.innerHTML = items.map(item => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:6px;background:#f9fafb;">
+      <div style="flex:1;min-width:0;">
+        <span style="font-weight:600;color:#1f2937;">${item.name || '未填写'}</span>
+        ${item.vip === 1 ? '<span style="font-size:10px;color:#10b981;font-weight:700;border:1px solid rgba(16,185,129,0.3);border-radius:4px;padding:1px 6px;margin-left:6px;">VIP</span>' : ''}
+        <div style="font-size:12px;color:#6b7280;margin-top:2px;">${item.district} · ${item.street} · ${item.detail || ''}</div>
+        ${keyword ? `<div style="font-size:10px;color:#9ca3af;margin-top:2px;">${item.month.replace('-', '年')}月</div>` : ''}
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        <button style="border:none;background:transparent;color:#f59e0b;font-size:12px;cursor:pointer;padding:6px 10px;" onclick="editAddressItem('${item.month}', ${item.index})">编辑</button>
+        <button style="border:none;background:transparent;color:#ef4444;font-size:12px;cursor:pointer;padding:6px 10px;" onclick="removeAddressItem('${item.month}', ${item.index})">删除</button>
       </div>
     </div>
   `).join('');
 }
 
-function removeAddressItem(index) {
-  const month = getCurrentMonth();
+function removeAddressItem(month, index) {
+  month = month || getCurrentMonth();
   const items = data.addressDetails[month] || [];
   if (index < 0 || index >= items.length) return;
   items.splice(index, 1);
-  // Recalculate from remaining addresses
-  const dist = data.addressDetails[month];
-  if (data.monthlyData[month]) {
-    const names = data.districtNames || [];
-    names.forEach(d => {
-      data.monthlyData[month].districtData[d] = { total: 0, vip: 0 };
-      (data.streetsByDistrict[d] || []).forEach(s => {
-        if (data.monthlyData[month].streetData[d]) data.monthlyData[month].streetData[d][s] = { total: 0, vip: 0 };
-      });
-    });
-    // Preserve "其他" data - don't clear it during address recalculation
-    items.forEach(item => {
-      if (!data.monthlyData[month].districtData[item.district]) data.monthlyData[month].districtData[item.district] = { total: 0, vip: 0 };
-      data.monthlyData[month].districtData[item.district].total++;
-      if (item.vip === 1) data.monthlyData[month].districtData[item.district].vip++;
-      if (!data.monthlyData[month].streetData[item.district]) data.monthlyData[month].streetData[item.district] = {};
-      if (!data.monthlyData[month].streetData[item.district][item.street]) data.monthlyData[month].streetData[item.district][item.street] = { total: 0, vip: 0 };
-      data.monthlyData[month].streetData[item.district][item.street].total++;
-      if (item.vip === 1) data.monthlyData[month].streetData[item.district][item.street].vip++;
-    });
-  }
-  // Save to localStorage immediately
-  const slimData = { monthlyData: data.monthlyData, addressDetails: data.addressDetails || {} };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(slimData));
-  onUploadMonthChange();
-  showToast('已删除，请点击"提交数据"同步到云端');
+  recalculateMonth(month);
+  autoSync('删除客户');
+  showToast('已删除客户，数据自动同步中');
 }
 
 function submitData() {
-  const userName = document.getElementById('userName').value.trim() || '匿名用户';
-  const month = getCurrentMonth();
-
-  // Read table inputs for district data (allows manual adjustment)
-  document.querySelectorAll('#uploadTable input').forEach(input => {
-    const district = input.dataset.district;
-    const field = input.dataset.field;
-    const value = parseInt(input.value) || 0;
-    if (!data.monthlyData[month]) data.monthlyData[month] = { districtData: {}, streetData: {} };
-    if (!data.monthlyData[month].districtData[district]) data.monthlyData[month].districtData[district] = { total: 0, vip: 0 };
-    data.monthlyData[month].districtData[district][field] = value;
-  });
-
-  // Also recalculate streetData from addressDetails to ensure consistency
-  if (data.addressDetails[month] && data.addressDetails[month].length > 0) {
-    if (!data.monthlyData[month].streetData) data.monthlyData[month].streetData = {};
-    const names = data.districtNames || [];
-    names.forEach(d => {
-      if (!data.monthlyData[month].streetData[d]) data.monthlyData[month].streetData[d] = {};
-      (data.streetsByDistrict[d] || []).forEach(s => {
-        if (!data.monthlyData[month].streetData[d][s]) data.monthlyData[month].streetData[d][s] = { total: 0, vip: 0 };
-      });
-    });
-    data.addressDetails[month].forEach(item => {
-      if (!data.monthlyData[month].streetData[item.district]) data.monthlyData[month].streetData[item.district] = {};
-      if (!data.monthlyData[month].streetData[item.district][item.street]) data.monthlyData[month].streetData[item.district][item.street] = { total: 0, vip: 0 };
-      // Don't double count - streetData is already maintained by addAddressItem etc.
-    });
-  }
-
-  saveData(userName);
-  showToast('数据提交成功！正在同步到所有设备...');
-  onUploadMonthChange();
-  refreshCurrentView();
+  autoSync('手动同步');
+  showToast('数据已同步');
 }
 
 function resetData() {
@@ -2021,9 +1952,8 @@ function resetData() {
   data.monthlyData = {};
   data.addressDetails = {};
   loadData();
-  saveData('系统重置');
+  autoSync('系统重置');
   initUpload();
-  refreshCurrentView();
   showToast('已恢复默认数据');
 }
 

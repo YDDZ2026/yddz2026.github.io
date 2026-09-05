@@ -7,12 +7,12 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preload" href="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" as="script" crossorigin>
 <link rel="preload" href="map-data.js?v=20260905a" as="script">
-<link rel="preload" href="app.js?v=20260905k" as="script">
+<link rel="preload" href="app.js?v=20260905m" as="script">
 <link rel="preload" href="data.json" as="fetch" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script defer src="map-data.js?v=20260905a"></script>
-<script defer src="app.js?v=20260905k"></script>
+<script defer src="app.js?v=20260905m"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
@@ -477,92 +477,82 @@ setTimeout(function(){
     <button class="btn-primary" style="width:100%;" onclick="tryAdminLogin()">验证登录</button>
     <div id="adminLoginError" style="color:var(--tv-danger);font-size:13px;margin-top:8px;text-align:center;display:none;">密码错误，请重试</div>
   </div>
-  <div id="uploadContent" style="display:none;">
-    <div class="upload-header">
-      <div class="upload-title">数据上传 <span style="font-size:14px;color:var(--tv-success);">✓ 管理员</span></div>
-      <div class="upload-subtitle">录入客户地址详情，系统自动归类到对应区县和街道，提交后实时同步到所有设备</div>
+  <div id="uploadContent" style="display:none;max-width:720px;margin:0 auto;padding:16px 20px 60px;">
+
+  <!-- Header Bar -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;font-weight:700;color:#1f2937;">数据录入</span>
+      <span style="font-size:12px;color:#10b981;background:#f0fdf4;padding:3px 10px;border-radius:12px;border:1px solid #bbf7d0;">✓ 管理员</span>
     </div>
-    <div class="upload-info">
-      📋 <b>地址录入</b>：录入客户地址详情，系统自动归类到对应区县和街道。<br>
-      🪪 <b>身份证识别</b>：粘贴身份证信息自动提取姓名和住址。<br>
-      🔴 右上角状态：绿色"已同步"=云端在线，红色"离线模式"=仅本地存储。
+    <div id="syncBadge" style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:#f0fdf4;font-size:12px;color:#15803d;">
+      <span id="syncDotInline" style="width:8px;height:8px;border-radius:50%;background:#10b981;animation:pulse 2s infinite;"></span>
+      <span id="syncTextInline">自动同步</span>
     </div>
-  <div class="upload-user">
-    <label style="font-size:13px;color:var(--mobile-dim);margin-right:8px;">您的姓名：</label>
-    <input type="text" id="userName" placeholder="请输入姓名">
-  </div>
-  <div class="upload-user" style="margin-bottom:16px;">
-    <label style="font-size:13px;color:var(--mobile-dim);margin-right:8px;display:block;margin-bottom:6px;">GitHub Token（仅首次需要，用于提交数据同步）：</label>
-    <input type="password" id="ghTokenInput" placeholder="粘贴你的 GitHub Token（自动保存到本地）" style="width:100%;max-width:400px;">
-    <div style="font-size:11px;color:var(--mobile-dim);margin-top:4px;">Token 保存在浏览器本地，不会上传到服务器。从 https://github.com/settings/tokens 创建，需勾选 repo 权限。</div>
   </div>
 
-  <div style="margin-bottom:16px;padding:10px 16px;background:var(--accent-light);border-radius:8px;font-size:14px;color:var(--mobile-text);">
-    📅 当前录入月份：<b id="currentMonthLabel">--</b>
-  </div>
+  <!-- Quick Stats -->
+  <div id="quickStats" style="display:flex;gap:10px;margin-bottom:16px;"></div>
 
-  <div class="upload-table" id="uploadTable"></div>
-
-  <div class="address-upload">
-    <div class="address-upload-title">📋 客户地址详情录入</div>
-    <div style="font-size:12px;color:var(--mobile-dim);margin-bottom:12px;">录入客户地址详情，系统自动归类到对应区县和街道，并同步更新上方表格数据。</div>
-    <!-- ID Card Smart Recognition -->
-    <div style="margin-bottom:16px;padding:14px;background:#f0f7ff;border:1.5px solid #bae6fd;border-radius:12px;">
-      <div style="font-size:14px;font-weight:600;margin-bottom:6px;color:#0369a1;">🪪 身份证智能识别</div>
-      <div style="font-size:11px;color:#475569;margin-bottom:10px;">复制粘贴客户身份证信息，系统自动提取姓名、住址等填入下方表单</div>
-      <textarea id="idCardInput" rows="6" placeholder="在此粘贴客户身份证信息...&#10;例如：&#10;姓名张三&#10;1990年1月1日XX省XX市XX区&#10;性别男民族汉&#10;出生&#10;住址XX市XX区XX街道XX号&#10;公民身份号码420XXXXXXXXXXXXXXX" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;resize:vertical;font-family:inherit;line-height:1.5;"></textarea>
+  <!-- ID Card Recognition (collapsible) -->
+  <details style="margin-bottom:12px;padding:0;border:1.5px solid #bae6fd;border-radius:12px;background:#f0f7ff;overflow:hidden;">
+    <summary style="padding:12px 16px;font-size:14px;font-weight:600;color:#0369a1;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;">🪪 身份证智能识别 <span style="font-size:11px;color:#64748b;font-weight:400;">（点击展开）</span></summary>
+    <div style="padding:0 16px 14px;">
+      <textarea id="idCardInput" rows="4" placeholder="粘贴客户身份证信息，自动识别姓名和住址...&#10;姓名张三&#10;住址XX市XX区XX街道XX号&#10;公民身份号码420XXXXXXXXXXXXXXX" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;resize:vertical;font-family:inherit;line-height:1.5;"></textarea>
       <div style="display:flex;gap:8px;margin-top:8px;">
-        <button class="btn-primary" style="padding:8px 24px;font-size:13px;" onclick="parseAndFillIdCard()">智能识别并填充</button>
+        <button class="btn-primary" style="padding:8px 20px;font-size:13px;" onclick="parseAndFillIdCard()">识别并填充 ↓</button>
         <button class="btn-secondary" style="padding:8px 16px;font-size:13px;" onclick="document.getElementById('idCardInput').value=''">清空</button>
       </div>
     </div>
-    <div class="address-input-row">
-      <select id="addrDistrict" onchange="onAddrDistrictChange()" style="min-width:140px;">
+  </details>
+
+  <!-- Quick Add Form -->
+  <div style="margin-bottom:12px;padding:16px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;">
+    <div style="font-size:14px;font-weight:600;margin-bottom:12px;color:#1f2937;">➕ 添加客户</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <select id="addrDistrict" onchange="onAddrDistrictChange()" style="padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;">
         <option value="">选择区县</option>
       </select>
-      <select id="addrStreet" style="min-width:140px;">
+      <select id="addrStreet" style="padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;">
         <option value="">选择街道/乡镇</option>
       </select>
-      <input type="text" id="addrDetail" placeholder="客户详细地址">
-      <input type="text" id="addrName" placeholder="客户姓名" style="max-width:120px;">
-      <select id="addrVip" style="min-width:100px;">
-        <option value="0">普通客户</option>
-        <option value="1">VIP客户</option>
+    </div>
+    <input type="text" id="addrDetail" placeholder="详细地址（如：清江大道168号）" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;margin-bottom:10px;" onkeydown="if(event.key==='Enter')addAddressItem()">
+    <div style="display:flex;gap:10px;align-items:center;">
+      <input type="text" id="addrName" placeholder="客户姓名" style="flex:1;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" onkeydown="if(event.key==='Enter')addAddressItem()">
+      <select id="addrVip" style="padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;">
+        <option value="0">普通</option>
+        <option value="1">VIP</option>
       </select>
-      <button onclick="addAddressItem()">添加</button>
+      <button class="btn-primary" style="padding:10px 28px;font-size:14px;white-space:nowrap;" onclick="addAddressItem()">添加</button>
     </div>
-    <div class="address-list" id="addressList"></div>
   </div>
 
-  <!-- Customer Search & Edit -->
-  <div style="margin-top:20px;padding:16px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;">
-    <div style="font-size:14px;font-weight:600;margin-bottom:10px;color:#1f2937;">🔍 搜索已有客户</div>
-    <div style="font-size:11px;color:#6b7280;margin-bottom:10px;">输入客户姓名搜索已录入的客户，点击搜索结果可编辑客户信息</div>
-    <div style="display:flex;gap:8px;">
-      <input type="text" id="customerSearchInput" placeholder="输入客户姓名..." style="flex:1;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" oninput="searchExistingCustomer()">
-      <button class="btn-secondary" style="padding:10px 20px;font-size:13px;" onclick="searchExistingCustomer()">搜索</button>
+  <!-- Excel Import (compact) -->
+  <div style="margin-bottom:12px;padding:12px 16px;background:#fffbeb;border:1.5px solid #fde68a;border-radius:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:13px;font-weight:600;color:#92400e;">📊 Excel批量导入</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-secondary" style="padding:8px 16px;font-size:12px;" onclick="downloadExcelTemplate()">📥 模板</button>
+        <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleExcelUpload(event)">
+        <button class="btn-primary" style="padding:8px 16px;font-size:12px;" onclick="document.getElementById('excelFileInput').click()">📁 上传</button>
+      </div>
     </div>
-    <div id="searchResults" style="margin-top:10px;max-height:300px;overflow-y:auto;"></div>
+    <div id="importStatus" style="font-size:12px;color:#6b7280;margin-top:8px;"></div>
+    <div id="importPreview" style="margin-top:8px;display:none;"></div>
   </div>
 
-  <!-- Excel Batch Import -->
-  <div style="margin-top:20px;padding:16px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;">
-    <div style="font-size:14px;font-weight:600;margin-bottom:6px;color:#1f2937;">📊 Excel批量导入</div>
-    <div style="font-size:11px;color:#6b7280;margin-bottom:12px;">下载模板填写客户信息，一次导入多条记录，大幅提升录入效率</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-      <button class="btn-secondary" style="padding:10px 20px;font-size:13px;" onclick="downloadExcelTemplate()">📥 下载模板</button>
-      <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleExcelUpload(event)">
-      <button class="btn-primary" style="padding:10px 20px;font-size:13px;" onclick="document.getElementById('excelFileInput').click()">📁 选择Excel文件</button>
+  <!-- Customer List -->
+  <div style="padding:16px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:14px;font-weight:600;color:#1f2937;">📋 客户列表 <span id="customerCount" style="font-size:12px;color:#6b7280;font-weight:400;"></span></div>
+      <span style="font-size:11px;color:#9ca3af;">数据自动同步</span>
     </div>
-    <div id="importStatus" style="font-size:13px;color:#6b7280;"></div>
-    <div id="importPreview" style="margin-top:12px;display:none;"></div>
+    <input type="text" id="customerSearchInput" placeholder="🔍 搜索客户姓名..." style="width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;margin-bottom:10px;" oninput="renderCustomerList()">
+    <div id="addressList" style="max-height:500px;overflow-y:auto;"></div>
   </div>
 
-  <div class="upload-actions">
-    <button class="btn-primary" id="submitBtn">提交数据</button>
-    <button class="btn-secondary" id="resetBtn">恢复默认</button>
-  </div>
-  <div class="upload-last-update" id="uploadLastUpdate"></div>
+  <div id="uploadLastUpdate" style="text-align:center;font-size:11px;color:#9ca3af;margin-top:12px;"></div>
   </div>
 </div>
 
