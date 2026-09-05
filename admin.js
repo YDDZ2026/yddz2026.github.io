@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupNavigation();
   setupSearch();
   setupSidebar();
+  setupDataEntryForm();
+  setupSettingsForm();
   await loadData();
 });
 
@@ -33,7 +35,7 @@ function switchView(view) {
   currentView = view;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.view === view));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
-  const titles = { overview: '数据概览', customers: '客户列表', regions: '区域分布' };
+  const titles = { overview: '数据概览', customers: '客户列表', regions: '区域分布', add: '数据录入', settings: '系统设置' };
   document.getElementById('pageTitle').textContent = titles[view] || view;
 
   // Close sidebar on mobile
@@ -46,6 +48,8 @@ function switchView(view) {
   if (view === 'overview') renderOverview();
   else if (view === 'customers') renderCustomers();
   else if (view === 'regions') renderRegions();
+  else if (view === 'add') setupDataEntry();
+  else if (view === 'settings') setupSettings();
 }
 
 // ====== Sidebar (mobile) ======
@@ -614,3 +618,362 @@ function renderStreetRankChart(sorted, district) {
 window.addEventListener('resize', () => {
   Object.values(charts).forEach(c => c && c.resize());
 });
+
+// ====== Data Entry ======
+let formDistricts = {};
+let formInitialized = false;
+
+function setupDataEntryForm() {
+  const submitBtn = document.getElementById('submitCustomer');
+  const resetBtn = document.getElementById('resetForm');
+  const districtSel = document.getElementById('customerDistrict');
+  const streetSel = document.getElementById('customerStreet');
+
+  if (submitBtn) submitBtn.addEventListener('click', submitCustomerForm);
+  if (resetBtn) resetBtn.addEventListener('click', () => {
+    document.getElementById('customerName').value = '';
+    districtSel.value = '';
+    streetSel.innerHTML = '<option value="">请先选择区县</option>';
+    document.getElementById('customerAddress').value = '';
+    document.getElementById('customerPhone').value = '';
+    document.getElementById('customerVip').checked = false;
+    document.getElementById('customerMonth').value = '';
+    hideFormMsg();
+    document.getElementById('formHint').className = 'form-msg info show';
+  });
+  if (districtSel) districtSel.addEventListener('change', () => onFormDistrictChange());
+}
+
+function setupDataEntry() {
+  // Set default month
+  const monthInput = document.getElementById('customerMonth');
+  if (monthInput && !monthInput.value) {
+    const now = new Date();
+    monthInput.value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  }
+  populateFormDistricts();
+}
+
+function populateFormDistricts() {
+  const sel = document.getElementById('customerDistrict');
+  if (!sel || !appData) return;
+  // Only populate once
+  if (sel.options.length > 1) return;
+
+  // Build district -> streets mapping from existing data
+  formDistricts = {};
+  allCustomers.forEach(c => {
+    if (c.district && c.district !== '其他') {
+      if (!formDistricts[c.district]) formDistricts[c.district] = new Set();
+      if (c.street && c.street !== '其他') formDistricts[c.district].add(c.street);
+    }
+  });
+
+  // Also include districts from map data
+  if (window.MAP_DATA && window.MAP_DATA.streetsGeo) {
+    Object.keys(window.MAP_DATA.streetsGeo).forEach(d => {
+      if (!formDistricts[d]) formDistricts[d] = new Set();
+    });
+  }
+
+  const sortedDistricts = Object.keys(formDistricts).sort();
+  sortedDistricts.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d; opt.textContent = d;
+    sel.appendChild(opt);
+  });
+}
+
+function onFormDistrictChange() {
+  const districtSel = document.getElementById('customerDistrict');
+  const streetSel = document.getElementById('customerStreet');
+  const district = districtSel.value;
+  streetSel.innerHTML = '<option value="">请选择街道</option>';
+
+  if (!district) return;
+
+  // Get streets for this district
+  let streets = formDistricts[district] ? [...formDistricts[district]] : [];
+
+  // Also add streets from map data
+  if (window.MAP_DATA && window.MAP_DATA.streetsGeo && window.MAP_DATA.streetsGeo[district]) {
+    const geo = window.MAP_DATA.streetsGeo[district];
+    if (geo.features) {
+      geo.features.forEach(f => {
+        const name = f.properties && (f.properties.name || f.properties.NAME);
+        if (name && !streets.includes(name)) streets.push(name);
+      });
+    }
+  }
+
+  streets.sort().forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s; opt.textContent = s;
+    streetSel.appendChild(opt);
+  });
+
+  // Allow custom street input
+  const customOpt = document.createElement('option');
+  customOpt.value = '__custom__'; customOpt.textContent = '其他（手动输入）';
+  streetSel.appendChild(customOpt);
+}
+
+function showFormMsg(type, text) {
+  const msg = document.getElementById('formMsg');
+  msg.className = 'form-msg show ' + type;
+  msg.textContent = text;
+  document.getElementById('formHint').classList.remove('show');
+}
+
+function hideFormMsg() {
+  const msg = document.getElementById('formMsg');
+  msg.className = 'form-msg';
+  msg.textContent = '';
+  document.getElementById('formHint').className = 'form-msg info show';
+}
+
+async function submitCustomerForm() {
+  // Validate
+  const name = document.getElementById('customerName').value.trim();
+  const district = document.getElementById('customerDistrict').value;
+  let street = document.getElementById('customerStreet').value;
+  const address = document.getElementById('customerAddress').value.trim();
+  const phone = document.getElementById('customerPhone').value.trim();
+  const vip = document.getElementById('customerVip').checked;
+  const monthInput = document.getElementById('customerMonth');
+
+  if (!name) { showFormMsg('error', '请输入客户姓名'); return; }
+  if (!district) { showFormMsg('error', '请选择所属区县'); return; }
+  if (!street) { showFormMsg('error', '请选择乡镇/街道'); return; }
+  if (!address) { showFormMsg('error', '请输入详细地址'); return; }
+
+  // Handle custom street
+  if (street === '__custom__') {
+    street = prompt('请输入街道名称：');
+    if (!street) return;
+  }
+
+  let month = monthInput.value;
+  if (!month) {
+    const now = new Date();
+    month = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  }
+
+  // Check GitHub settings
+  const settings = getGitHubSettings();
+  if (!settings.token || !settings.user || !settings.repo) {
+    showFormMsg('error', '请先在"设置"页面配置GitHub令牌');
+    return;
+  }
+
+  // Disable submit button
+  const submitBtn = document.getElementById('submitCustomer');
+  submitBtn.disabled = true;
+  submitBtn.textContent = '正在提交...';
+  showFormMsg('info', '正在提交数据到GitHub，请稍候...');
+
+  try {
+    // Fetch current data.json from GitHub API (get SHA for update)
+    const fileResp = await fetch(`https://api.github.com/repos/${settings.user}/${settings.repo}/contents/data.json`, {
+      headers: { 'Authorization': `Bearer ${settings.token}`, 'Accept': 'application/vnd.github.v3+json' }
+    });
+
+    if (!fileResp.ok) {
+      const errData = await fileResp.json().catch(() => ({}));
+      throw new Error(`获取文件失败: ${fileResp.status} ${errData.message || ''}`);
+    }
+
+    const fileInfo = await fileResp.json();
+    const sha = fileInfo.sha;
+
+    // Decode current content and parse
+    const currentContent = decodeURIComponent(escape(atob(fileInfo.content.replace(/\n/g, ''))));
+    const dataObj = JSON.parse(currentContent);
+
+    // Ensure structures exist
+    if (!dataObj.addressDetails) dataObj.addressDetails = {};
+    if (!dataObj.monthlyData) dataObj.monthlyData = {};
+
+    const monthKey = month; // e.g., "2026-09"
+
+    // Add customer entry to addressDetails
+    if (!dataObj.addressDetails[monthKey]) dataObj.addressDetails[monthKey] = [];
+    dataObj.addressDetails[monthKey].push({
+      name: name,
+      district: district,
+      street: street,
+      detail: address,
+      vip: vip,
+      phone: phone || undefined
+    });
+
+    // Update monthlyData
+    if (!dataObj.monthlyData[monthKey]) {
+      dataObj.monthlyData[monthKey] = { districtData: {}, streetData: {} };
+    }
+    const md = dataObj.monthlyData[monthKey];
+    if (!md.districtData) md.districtData = {};
+    if (!md.streetData) md.streetData = {};
+
+    // Update district counts
+    if (!md.districtData[district]) md.districtData[district] = { total: 0, vip: 0 };
+    md.districtData[district].total = (md.districtData[district].total || 0) + 1;
+    if (vip) md.districtData[district].vip = (md.districtData[district].vip || 0) + 1;
+
+    // Update street counts
+    if (!md.streetData[district]) md.streetData[district] = {};
+    if (!md.streetData[district][street]) md.streetData[district][street] = { total: 0, vip: 0 };
+    md.streetData[district][street].total = (md.streetData[district][street].total || 0) + 1;
+    if (vip) md.streetData[district][street].vip = (md.streetData[district][street].vip || 0) + 1;
+
+    // Update timestamp
+    dataObj.updated_at = new Date().toISOString();
+
+    // Encode and push to GitHub
+    const newContent = JSON.stringify(dataObj, null, 2);
+    const encodedContent = btoa(unescape(encodeURIComponent(newContent)));
+
+    const updateResp = await fetch(`https://api.github.com/repos/${settings.user}/${settings.repo}/contents/data.json`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${settings.token}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: `添加客户: ${name} (${district} ${street}) - ${monthKey}`,
+        content: encodedContent,
+        sha: sha
+      })
+    });
+
+    if (!updateResp.ok) {
+      const errData = await updateResp.json().catch(() => ({}));
+      throw new Error(`提交失败: ${updateResp.status} ${errData.message || ''}`);
+    }
+
+    showFormMsg('success', `客户"${name}"已成功添加！数据已同步到网站。`);
+
+    // Reload local data
+    setTimeout(() => {
+      loadData();
+      // Reset form
+      document.getElementById('customerName').value = '';
+      document.getElementById('customerAddress').value = '';
+      document.getElementById('customerPhone').value = '';
+      document.getElementById('customerVip').checked = false;
+    }, 2000);
+
+  } catch (err) {
+    console.error('Submit error:', err);
+    showFormMsg('error', '提交失败: ' + err.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = '保存客户信息';
+  }
+}
+
+// ====== Settings ======
+function setupSettingsForm() {
+  const saveBtn = document.getElementById('saveSettings');
+  const testBtn = document.getElementById('testConnection');
+
+  if (saveBtn) saveBtn.addEventListener('click', saveSettings);
+  if (testBtn) testBtn.addEventListener('click', testGitHubConnection);
+
+  // Load saved settings
+  const saved = localStorage.getItem('gh_settings');
+  if (saved) {
+    try {
+      const s = JSON.parse(saved);
+      const tokenInput = document.getElementById('githubToken');
+      const userInput = document.getElementById('githubUser');
+      const repoInput = document.getElementById('githubRepo');
+      const saveChk = document.getElementById('saveToken');
+      if (s.token && tokenInput) tokenInput.value = s.token;
+      if (s.user && userInput) userInput.value = s.user;
+      if (s.repo && repoInput) repoInput.value = s.repo;
+      if (saveChk) saveChk.checked = true;
+    } catch(e) { console.error('Load settings:', e); }
+  }
+
+  // Set defaults
+  const userInput = document.getElementById('githubUser');
+  const repoInput = document.getElementById('githubRepo');
+  if (userInput && !userInput.value) userInput.value = 'yddz2026';
+  if (repoInput && !repoInput.value) repoInput.value = 'yddz2026.github.io';
+}
+
+function setupSettings() {
+  // Called when switching to settings view - settings already loaded in setupSettingsForm
+}
+
+function getGitHubSettings() {
+  return {
+    token: document.getElementById('githubToken').value.trim(),
+    user: document.getElementById('githubUser').value.trim() || 'yddz2026',
+    repo: document.getElementById('githubRepo').value.trim() || 'yddz2026.github.io'
+  };
+}
+
+function saveSettings() {
+  const settings = getGitHubSettings();
+  const saveChk = document.getElementById('saveToken');
+  const msg = document.getElementById('settingsMsg');
+
+  if (saveChk.checked && settings.token) {
+    localStorage.setItem('gh_settings', JSON.stringify(settings));
+    msg.className = 'form-msg show success';
+    msg.textContent = '设置已保存到本地浏览器';
+  } else {
+    localStorage.removeItem('gh_settings');
+    msg.className = 'form-msg show info';
+    msg.textContent = '设置已清除（未勾选记住令牌）';
+  }
+  setTimeout(() => { msg.className = 'form-msg'; }, 3000);
+}
+
+async function testGitHubConnection() {
+  const settings = getGitHubSettings();
+  const msg = document.getElementById('settingsMsg');
+  const testBtn = document.getElementById('testConnection');
+
+  if (!settings.token) {
+    msg.className = 'form-msg show error';
+    msg.textContent = '请先输入GitHub令牌';
+    return;
+  }
+
+  testBtn.disabled = true;
+  testBtn.textContent = '测试中...';
+  msg.className = 'form-msg show info';
+  msg.textContent = '正在测试连接...';
+
+  try {
+    const resp = await fetch(`https://api.github.com/repos/${settings.user}/${settings.repo}`, {
+      headers: { 'Authorization': `Bearer ${settings.token}`, 'Accept': 'application/vnd.github.v3+json' }
+    });
+
+    if (resp.ok) {
+      const data = await resp.json();
+      msg.className = 'form-msg show success';
+      msg.textContent = `连接成功！仓库: ${data.full_name}，权限正常`;
+    } else if (resp.status === 401) {
+      msg.className = 'form-msg show error';
+      msg.textContent = '令牌无效或已过期，请重新创建';
+    } else if (resp.status === 404) {
+      msg.className = 'form-msg show error';
+      msg.textContent = '仓库不存在或令牌无权限访问';
+    } else {
+      const errData = await resp.json().catch(() => ({}));
+      msg.className = 'form-msg show error';
+      msg.textContent = `连接失败: ${resp.status} ${errData.message || ''}`;
+    }
+  } catch (err) {
+    msg.className = 'form-msg show error';
+    msg.textContent = '网络错误: ' + err.message;
+  } finally {
+    testBtn.disabled = false;
+    testBtn.textContent = '测试连接';
+  }
+}
