@@ -457,6 +457,10 @@ function refreshMonthSelectors() {
   if (up) {
     const months = getAvailableMonths();
     up.innerHTML = months.map(m => `<option value="${m}">${getMonthLabel(m)}</option>`).join('');
+    // Default to latest month
+    if (months.length > 0) {
+      up.value = months[months.length - 1];
+    }
   }
 }
 
@@ -925,11 +929,32 @@ function initUpload() {
       GITHUB_CONFIG.token = this.value.trim();
     });
   }
+  // Ensure current month exists in data
+  ensureCurrentMonth();
   refreshMonthSelectors();
   onUploadMonthChange();
   populateDistrictSelect();
   const info = localStorage.getItem(UPDATE_KEY);
   if (info) { try { updateLastUpdate(JSON.parse(info)); } catch(e) {} }
+}
+
+// Ensure current month exists in monthlyData with zero-initialized structure
+function ensureCurrentMonth() {
+  if (!data || !data.monthlyData) return;
+  const now = new Date();
+  const currentMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  if (!data.monthlyData[currentMonth]) {
+    data.monthlyData[currentMonth] = { districtData: {}, streetData: {} };
+    const names = data.districtNames || [];
+    names.forEach(d => {
+      data.monthlyData[currentMonth].districtData[d] = { total: 0, vip: 0 };
+      data.monthlyData[currentMonth].streetData[d] = {};
+      (data.streetsByDistrict[d] || []).forEach(s => {
+        data.monthlyData[currentMonth].streetData[d][s] = { total: 0, vip: 0 };
+      });
+    });
+    data.monthlyData[currentMonth].districtData['其他'] = { total: 0, vip: 0 };
+  }
 }
 
 function onUploadMonthChange() {
