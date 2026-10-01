@@ -391,7 +391,7 @@ async function loadFromGitHub() {
         lastDataSHA = newSHA;
         data.monthlyData = cloudData.monthlyData;
         if (cloudData.addressDetails) data.addressDetails = cloudData.addressDetails;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ monthlyData: data.monthlyData, addressDetails: data.addressDetails || {} }));
         const info = { name: cloudData.updated_by || '系统', time: cloudData.updated_at ? new Date(cloudData.updated_at).toLocaleString('zh-CN', {hour12: false}) : '' };
         localStorage.setItem(UPDATE_KEY, JSON.stringify(info));
         updateLastUpdate(info);
@@ -442,16 +442,19 @@ function startPolling() {
 
 // ========== Data Management ==========
 function loadData() {
+  // Always start from EMBEDDED_DATA for static map data
+  data = JSON.parse(JSON.stringify(EMBEDDED_DATA));
+  // Overlay dynamic data from localStorage
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
-    try { data = JSON.parse(stored); } catch(e) { data = JSON.parse(JSON.stringify(EMBEDDED_DATA)); }
-  } else {
-    data = JSON.parse(JSON.stringify(EMBEDDED_DATA));
-    saveData();
+    try {
+      const parsed = JSON.parse(stored);
+      if (parsed.monthlyData) data.monthlyData = parsed.monthlyData;
+      if (parsed.addressDetails) data.addressDetails = parsed.addressDetails;
+    } catch(e) {}
   }
   if (!data.addressDetails) data.addressDetails = {};
   if (!data.monthlyData) data.monthlyData = { '2026-08': { districtData: {}, streetData: {} } };
-  // Ensure 2026-08 exists with all districts
   if (!data.monthlyData['2026-08']) {
     data.monthlyData['2026-08'] = { districtData: {}, streetData: {} };
   }
@@ -467,7 +470,9 @@ function loadData() {
 
 function saveData(updater) {
   const info = { name: updater || '系统', time: new Date().toLocaleString('zh-CN', {hour12: false}) };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  // Only save dynamic data to localStorage (not the 211KB map data)
+  const dynamicData = { monthlyData: data.monthlyData, addressDetails: data.addressDetails || {} };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(dynamicData));
   localStorage.setItem(UPDATE_KEY, JSON.stringify(info));
   bc.postMessage({type: 'data_update', data: data, update: info});
   saveToGitHub(updater);
@@ -879,34 +884,51 @@ function onUploadMonthChange() {
   const dd = getMonthDistrictData(month);
   const names = data.districtNames || [];
 
-  let html = `<table><thead><tr><th>区县</th><th>客户总数</th><th>VIP客户</th><th>普通客户</th><th>VIP占比</th></tr></thead><tbody>`;
-  // Sort by name for consistency
+  let html = '<div class="district-cards">';
   names.forEach(name => {
     const d = dd[name] || {total:0, vip:0};
-    const normal = d.total - d.vip;
-    const rate = d.total>0?(d.vip/d.total*100).toFixed(1):'0.0';
-    html += `<tr>
-      <td style="font-weight:600">${name}</td>
-      <td><input type="number" min="0" value="${d.total}" data-district="${name}" data-field="total"></td>
-      <td><input type="number" min="0" value="${d.vip}" data-district="${name}" data-field="vip"></td>
-      <td class="calc" id="calc-${name}">${normal}</td>
-      <td class="calc" id="rate-${name}">${rate}%</td>
-    </tr>`;
+    html += `<div class="district-card" data-district="${name}">
+      <div class="dc-name">${name}</div>
+      <div class="dc-row">
+        <span class="dc-label">客户</span>
+        <div class="dc-stepper">
+          <button class="dc-btn" onclick="stepValue('${name}','total',-1)">−</button>
+          <input type="number" min="0" value="${d.total}" data-district="${name}" data-field="total" onchange="onCardInput(this)">
+          <button class="dc-btn" onclick="stepValue('${name}','total',1)">+</button>
+        </div>
+      </div>
+      <div class="dc-row">
+        <span class="dc-label">VIP</span>
+        <div class="dc-stepper">
+          <button class="dc-btn" onclick="stepValue('${name}','vip',-1)">−</button>
+          <input type="number" min="0" value="${d.vip}" data-district="${name}" data-field="vip" onchange="onCardInput(this)">
+          <button class="dc-btn" onclick="stepValue('${name}','vip',1)">+</button>
+        </div>
+      </div>
+      <div class="dc-summary" id="summary-${name}">${d.total}户 · VIP ${d.vip}</div>
+    </div>`;
   });
-  html += '</tbody></table>';
+  html += '</div>';
   document.getElementById('uploadTable').innerHTML = html;
-
-  document.querySelectorAll('#uploadTable input').forEach(input => {
-    input.addEventListener('input', function() {
-      const district = this.dataset.district;
-      const row = this.closest('tr');
-      const total = parseInt(row.querySelector('[data-field="total"]').value) || 0;
-      const vip = parseInt(row.querySelector('[data-field="vip"]').value) || 0;
-      document.getElementById('calc-'+district).textContent = Math.max(0, total-vip);
-      document.getElementById('rate-'+district).textContent = (total>0?(vip/total*100).toFixed(1):'0.0') + '%';
-    });
-  });
   renderAddressList(month);
+}
+
+function stepValue(district, field, delta) {
+  const input = document.querySelector(`#uploadTable input[data-district="${district}"][data-field="${field}"]`);
+  if (!input) return;
+  let val = parseInt(input.value) || 0;
+  val = Math.max(0, val + delta);
+  input.value = val;
+  onCardInput(input);
+}
+
+function onCardInput(input) {
+  const district = input.dataset.district;
+  const card = input.closest('.district-card');
+  const total = parseInt(card.querySelector('[data-field="total"]').value) || 0;
+  const vip = parseInt(card.querySelector('[data-field="vip"]').value) || 0;
+  const summary = document.getElementById('summary-' + district);
+  if (summary) summary.textContent = total + '户 · VIP ' + vip;
 }
 
 function populateDistrictSelect() {
@@ -1041,7 +1063,7 @@ function submitData() {
   });
 
   saveData(userName);
-  showToast('数据提交成功！正在同步到所有设备...');
+  showToast('✓ 数据提交成功！正在同步...');
   refreshMonthSelectors();
   refreshCurrentView();
 }
