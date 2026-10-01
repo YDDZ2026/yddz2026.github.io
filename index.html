@@ -2,22 +2,14 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>宜都华晟达洲比亚迪客户分布</title>
-<link rel="icon" href="logo.png" type="image/png">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="dns-prefetch" href="https://api.github.com">
 <link rel="preload" href="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" as="script" crossorigin>
-<link rel="preload" href="map-data.js?v=20260905a" as="script">
-<link rel="preload" href="app.js?v=20260905t" as="script">
-<link rel="preload" href="data.json" as="fetch" crossorigin>
+<link rel="preload" href="https://cdn.jsdelivr.net/gh/yddz2026/yddz2026.github.io@main/app.js" as="script" crossorigin>
 <script defer src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script defer src="twemoji.min.js"></script>
-<script defer src="map-data.js?v=20260905a"></script>
-<script defer src="app.js?v=20260905t"></script>
+<script defer src="https://cdn.jsdelivr.net/gh/yddz2026/yddz2026.github.io@main/app.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
@@ -33,7 +25,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
 /* ========== Navigation ========== */
 .nav-bar { position: fixed; top: 0; left: 0; right: 0; height: 56px; background: rgba(10,14,26,0.95); backdrop-filter: blur(10px); z-index: 1000; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid rgba(59,130,246,0.2); }
 .nav-logo { font-size: 16px; font-weight: 700; color: var(--tv-text); display: flex; align-items: center; gap: 8px; white-space: nowrap; }
-.nav-logo .logo-img { height: 28px; width: auto; filter: drop-shadow(0 0 4px rgba(59,130,246,0.3)); }
 .nav-logo .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--tv-success); animation: pulse 2s infinite; }
   .nav-logo .dot.offline { background: var(--tv-danger); }
   .nav-logo .dot.connecting { background: var(--tv-warn); }
@@ -116,24 +107,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
 .tv-detail-stat { background: rgba(59,130,246,0.05); border-radius: 8px; padding: 10px; text-align: center; }
 .tv-detail-stat .label { font-size: 11px; color: var(--tv-dim); }
 .tv-detail-stat .value { font-size: 20px; font-weight: 700; margin-top: 4px; }
-.tv-rank-bar { margin-bottom: 6px; border-radius: 6px; padding: 2px 4px; transition: background 0.2s; }
+.tv-rank-bar { margin-bottom: 6px; }
 .tv-rank-bar .row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .tv-rank-bar .name { width: 100px; font-size: 12px; color: var(--tv-dim); text-align: right; }
 .tv-rank-bar .bar-bg { flex: 1; height: 18px; background: rgba(59,130,246,0.1); border-radius: 4px; overflow: hidden; }
 .tv-rank-bar .bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
 .tv-rank-bar .val { width: 50px; font-size: 12px; color: var(--tv-text); font-variant-numeric: tabular-nums; }
-.tv-rank-bar.clickable:hover { background: rgba(59,130,246,0.12); }
-.tv-rank-bar.clickable:hover .name { color: var(--tv-accent); }
-.tv-rank-bar.clickable:hover .bar-bg { background: rgba(59,130,246,0.2); }
-.tv-cust-list { max-height: 400px; overflow-y: auto; border-radius: 8px; background: rgba(59,130,246,0.03); }
-.tv-cust-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-bottom: 1px solid rgba(59,130,246,0.08); font-size: 12px; transition: background 0.15s; }
-.tv-cust-row:hover { background: rgba(59,130,246,0.08); }
-.tv-cust-row:last-child { border-bottom: none; }
-.tv-cust-name { font-weight: 600; color: var(--tv-text); min-width: 60px; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
-.tv-cust-addr { flex: 1; color: var(--tv-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tv-cust-month { font-size: 10px; color: #6b7280; flex-shrink: 0; }
-.tv-cust-vip { font-size: 10px; color: #10b981; font-weight: 700; padding: 1px 6px; border: 1px solid rgba(16,185,129,0.3); border-radius: 4px; flex-shrink: 0; }
-.tv-cust-normal { font-size: 10px; color: #6b7280; padding: 1px 6px; border: 1px solid rgba(107,114,128,0.3); border-radius: 4px; flex-shrink: 0; }
 .fullscreen-btn { position: absolute; top: 16px; right: 16px; z-index: 10; padding: 6px 12px; background: rgba(59,130,246,0.15); border: 1px solid var(--tv-accent); border-radius: 8px; color: var(--tv-accent); cursor: pointer; font-size: 12px; }
 .fullscreen-btn:hover { background: rgba(59,130,246,0.3); }
 :fullscreen .nav-bar { display: none; }
@@ -184,9 +163,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: #fff; padding: 12px 24px; border-radius: 10px; font-size: 14px; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
 .toast.show { opacity: 1; }
 
-/* ========== Twemoji Image Styling ========== */
-img.emoji { height: 1em; width: 1em; margin: 0 0.05em 0.1em; vertical-align: -0.1em; display: inline-block; }
-
 /* ========== Address Upload Section ========== */
 .address-upload { background: var(--mobile-card); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 16px; }
 .address-upload-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--mobile-text); }
@@ -205,145 +181,14 @@ img.emoji { height: 1em; width: 1em; margin: 0 0.05em 0.1em; vertical-align: -0.
   .tv-main { grid-template-columns: 1fr; height: auto; }
   .tv-panel { max-height: 400px; }
   .tv-stats { flex-wrap: wrap; }
-  .nav-bar { height: 44px; padding: 0 10px; justify-content: space-between; }
-  .nav-logo { font-size: 12px; gap: 5px; max-width: 160px; overflow: hidden; }
-  .nav-logo .sync-status { display: none; }
-  .nav-tabs { gap: 2px; flex-shrink: 0; }
-  .nav-tab { padding: 4px 8px; font-size: 11px; }
-  .nav-clock { display: none; }
-  .tv-title { font-size: 18px; }
+  .nav-tab { padding: 6px 10px; font-size: 12px; }
+  .nav-logo { font-size: 13px; }
+  .tv-title { font-size: 20px; }
 }
-
-/* ========== Animation Effects for Exhibition ========== */
-@keyframes particleFloat {
-  0% { transform: translateY(0) translateX(0); opacity: 0; }
-  10% { opacity: 0.6; }
-  90% { opacity: 0.4; }
-  100% { transform: translateY(-100vh) translateX(30px); opacity: 0; }
-}
-@keyframes glowPulse {
-  0%, 100% { box-shadow: 0 0 5px rgba(59,130,246,0.3), 0 0 10px rgba(59,130,246,0.1); }
-  50% { box-shadow: 0 0 20px rgba(59,130,246,0.6), 0 0 40px rgba(59,130,246,0.2); }
-}
-@keyframes borderFlow {
-  0% { border-image-source: linear-gradient(0deg, #3b82f6, #1e3a5f); }
-  50% { border-image-source: linear-gradient(180deg, #3b82f6, #1e3a5f); }
-  100% { border-image-source: linear-gradient(360deg, #3b82f6, #1e3a5f); }
-}
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-@keyframes statCardEnter {
-  0% { transform: scale(0.8) translateY(10px); opacity: 0; }
-  100% { transform: scale(1) translateY(0); opacity: 1; }
-}
-@keyframes rankBarSlide {
-  0% { transform: translateX(-20px); opacity: 0; }
-  100% { transform: translateX(0); opacity: 1; }
-}
-@keyframes titleGlow {
-  0%, 100% { filter: drop-shadow(0 0 2px rgba(59,130,246,0.3)); }
-  50% { filter: drop-shadow(0 0 8px rgba(59,130,246,0.6)); }
-}
-@keyframes tickerScroll {
-  0% { transform: translateX(100%); }
-  100% { transform: translateX(-100%); }
-}
-@keyframes scanLine {
-  0% { top: 0; opacity: 0.8; }
-  100% { top: 100%; opacity: 0; }
-}
-
-/* Particle background */
-.tv-view::before {
-  content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  pointer-events: none; z-index: 0;
-  background-image: 
-    radial-gradient(circle at 15% 30%, rgba(59,130,246,0.04) 0%, transparent 40%),
-    radial-gradient(circle at 85% 70%, rgba(139,92,246,0.04) 0%, transparent 40%),
-    radial-gradient(circle at 50% 90%, rgba(6,182,212,0.03) 0%, transparent 50%);
-  animation: bgShift 20s ease-in-out infinite;
-}
-@keyframes bgShift {
-  0%, 100% { background-position: 0% 0%, 100% 100%, 50% 100%; }
-  33% { background-position: 30% 20%, 70% 80%, 60% 90%; }
-  66% { background-position: 60% 40%, 40% 60%, 40% 80%; }
-}
-
-/* Animated stat cards */
-.tv-stat-card {
-  animation: statCardEnter 0.5s ease-out backwards, glowPulse 3s ease-in-out infinite;
-}
-.tv-stat-card:nth-child(1) { animation-delay: 0s, 0s; }
-.tv-stat-card:nth-child(2) { animation-delay: 0.15s, 0.5s; }
-.tv-stat-card:nth-child(3) { animation-delay: 0.3s, 1s; }
-
-/* Title glow */
-.tv-title { animation: titleGlow 3s ease-in-out infinite; }
-
-/* Rank bar staggered animation */
-.tv-rank-bar { animation: rankBarSlide 0.4s ease-out backwards; }
-.tv-rank-bar:nth-child(1) { animation-delay: 0.05s; }
-.tv-rank-bar:nth-child(2) { animation-delay: 0.1s; }
-.tv-rank-bar:nth-child(3) { animation-delay: 0.15s; }
-.tv-rank-bar:nth-child(4) { animation-delay: 0.2s; }
-.tv-rank-bar:nth-child(5) { animation-delay: 0.25s; }
-.tv-rank-bar:nth-child(6) { animation-delay: 0.3s; }
-.tv-rank-bar:nth-child(7) { animation-delay: 0.35s; }
-.tv-rank-bar:nth-child(8) { animation-delay: 0.4s; }
-.tv-rank-bar:nth-child(9) { animation-delay: 0.45s; }
-.tv-rank-bar:nth-child(10) { animation-delay: 0.5s; }
-.tv-rank-bar:nth-child(11) { animation-delay: 0.55s; }
-.tv-rank-bar:nth-child(12) { animation-delay: 0.6s; }
-.tv-rank-bar:nth-child(13) { animation-delay: 0.65s; }
-.tv-rank-bar:nth-child(14) { animation-delay: 0.7s; }
-
-/* Shimmer on bar fills */
-.tv-rank-bar .bar-fill {
-  background-image: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  background-size: 200% 100%;
-  animation: shimmer 2s linear infinite;
-}
-
-/* Map scan line effect */
-.tv-map-container::after {
-  content: ''; position: absolute; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(59,130,246,0.6), transparent);
-  pointer-events: none; z-index: 5; animation: scanLine 4s linear infinite;
-}
-
-/* Card border glow */
-.tv-panel, .tv-map-container {
-  animation: glowPulse 4s ease-in-out infinite;
-}
-
-/* Data ticker */
-.tv-ticker {
-  position: fixed; bottom: 28px; left: 0; right: 0; height: 28px;
-  background: rgba(10,14,26,0.8); border-top: 1px solid rgba(59,130,246,0.2);
-  overflow: hidden; z-index: 50; display: flex; align-items: center;
-}
-.tv-ticker-label {
-  flex-shrink: 0; padding: 0 12px; font-size: 11px; font-weight: 700;
-  color: #3b82f6; border-right: 1px solid rgba(59,130,246,0.2); height: 100%;
-  display: flex; align-items: center; background: rgba(59,130,246,0.05);
-}
-.tv-ticker-content {
-  flex: 1; overflow: hidden; white-space: nowrap;
-}
-.tv-ticker-text {
-  display: inline-block; padding-left: 100%;
-  font-size: 12px; color: #9ca3af;
-  animation: tickerScroll 40s linear infinite;
-}
-.tv-ticker-text span { color: #3b82f6; font-weight: 600; margin: 0 4px; }
-
 </style>
 </head>
 <body>
-<div id="appLoading" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#0a0e1a;display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:20px;">
-  <img src="logo.png" style="height:50px;width:auto;filter:drop-shadow(0 0 12px rgba(59,130,246,0.4));" alt="BYD王朝">
+<div id="appLoading" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#0a0e1a;display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:16px;">
   <div style="width:40px;height:40px;border:3px solid #1e3a5f;border-top-color:#3b82f6;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
   <div style="color:#6b7280;font-size:14px;">正在加载客户分布系统...</div>
   <div id="loadProgress" style="color:#3b82f6;font-size:12px;margin-top:4px;">加载资源中...</div>
@@ -364,7 +209,7 @@ setTimeout(function(){
 
 <!-- Navigation Bar -->
 <div class="nav-bar">
-  <div class="nav-logo"><span class="dot connecting" id="syncDot"></span><img src="logo.png" class="logo-img" alt="BYD王朝"><span class="sync-status" id="syncStatus">连接中...</span></div>
+  <div class="nav-logo"><span class="dot connecting" id="syncDot"></span>宜都华晟达洲比亚迪客户分布<span class="sync-status" id="syncStatus">连接中...</span></div>
   <div class="nav-tabs" id="navTabs">
     <a class="nav-tab" href="#tv" data-view="tv">展厅大屏</a>
     <a class="nav-tab" href="#upload" data-view="upload">数据上传</a>
@@ -376,10 +221,7 @@ setTimeout(function(){
 <div id="tvView" class="tv-view" style="display:none;">
   <div class="tv-header">
     <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <img src="logo.png" style="height:36px;width:auto;filter:drop-shadow(0 0 8px rgba(59,130,246,0.4));" alt="BYD王朝">
-        <div class="tv-title">宜都华晟达洲比亚迪 · 客户分布</div>
-      </div>
+      <div class="tv-title">宜都华晟达洲比亚迪 · 宜昌客户分布</div>
       <div class="month-picker-bar">
         <div class="picker-mode-toggle">
           <button class="mode-btn active" data-mode="month" onclick="setPickerMode('tv','month')">按月</button>
@@ -422,20 +264,12 @@ setTimeout(function(){
       <div id="tvRankList"></div>
     </div>
   </div>
-  <!-- Data Ticker -->
-  <div class="tv-ticker" id="tvTicker">
-    <div class="tv-ticker-label">实时数据</div>
-    <div class="tv-ticker-content"><div class="tv-ticker-text" id="tvTickerText"></div></div>
-  </div>
 </div>
 
 <!-- Mobile View -->
 <div id="mobileView" class="mobile-view" style="display:none;">
   <div class="mobile-header">
-    <div style="display:flex;align-items:center;gap:10px;">
-      <img src="logo.png" style="height:28px;width:auto;filter:drop-shadow(0 0 6px rgba(59,130,246,0.4));" alt="BYD王朝">
-      <div class="mobile-title">客户分布</div>
-    </div>
+    <div class="mobile-title">宜都华晟达洲比亚迪 · 宜昌客户分布</div>
     <div class="mobile-subtitle" id="mobileSubtitle">点击地图区域查看详情</div>
   </div>
   <div class="mobile-month-picker">
@@ -482,9 +316,7 @@ setTimeout(function(){
 <div id="uploadView" class="upload-view" style="display:none;">
   <div id="adminLoginGate" style="max-width:400px;margin:60px auto;background:var(--mobile-card);border-radius:16px;padding:32px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
     <div style="text-align:center;margin-bottom:24px;">
-      <div style="background:#0a0e1a;border-radius:16px;padding:20px;margin-bottom:16px;">
-        <img src="logo.png" style="height:40px;width:auto;filter:drop-shadow(0 0 8px rgba(59,130,246,0.4));" alt="BYD王朝">
-      </div>
+      <div style="font-size:48px;margin-bottom:12px;">🔐</div>
       <div style="font-size:20px;font-weight:700;color:var(--mobile-text);">管理员验证</div>
       <div style="font-size:13px;color:var(--mobile-dim);margin-top:4px;">仅管理员可编辑和上传客户数据</div>
     </div>
@@ -495,111 +327,65 @@ setTimeout(function(){
     <button class="btn-primary" style="width:100%;" onclick="tryAdminLogin()">验证登录</button>
     <div id="adminLoginError" style="color:var(--tv-danger);font-size:13px;margin-top:8px;text-align:center;display:none;">密码错误，请重试</div>
   </div>
-  <div id="uploadContent" style="display:none;max-width:720px;margin:0 auto;padding:16px 20px 60px;">
-
-  <!-- Header Bar -->
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-    <div style="display:flex;align-items:center;gap:10px;">
-      <div style="background:#0a0e1a;border-radius:10px;padding:6px 10px;">
-        <img src="logo.png" style="height:24px;width:auto;" alt="BYD王朝">
-      </div>
-      <span style="font-size:20px;font-weight:700;color:#1f2937;">数据录入</span>
-      <span style="font-size:12px;color:#10b981;background:#f0fdf4;padding:3px 10px;border-radius:12px;border:1px solid #bbf7d0;">✓ 管理员</span>
+  <div id="uploadContent" style="display:none;">
+    <div class="upload-header">
+      <div class="upload-title">数据上传 <span style="font-size:14px;color:var(--tv-success);">✓ 管理员</span></div>
+      <div class="upload-subtitle">按月编辑宜昌各区县客户数据，提交后实时同步到所有设备</div>
     </div>
-    <div id="syncBadge" style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:#f0fdf4;font-size:12px;color:#15803d;">
-      <span id="syncDotInline" style="width:8px;height:8px;border-radius:50%;background:#10b981;animation:pulse 2s infinite;"></span>
-      <span id="syncTextInline">自动同步</span>
+    <div class="upload-info">
+      💡 <b>按月统计</b>：选择月份后编辑该月各区县客户数据，支持2026年8月起逐月统计。<br>
+      📊 <b>累计查看</b>：在大屏选择"累计"可查看所有月份汇总数据。<br>
+      📋 <b>地址录入</b>：录入客户地址详情，系统自动归类到对应区县和街道。<br>
+      🔴 右上角状态：绿色"已同步"=云端在线，红色"离线模式"=仅本地存储。
     </div>
+  <div class="upload-user">
+    <label style="font-size:13px;color:var(--mobile-dim);margin-right:8px;">您的姓名：</label>
+    <input type="text" id="userName" placeholder="请输入姓名">
+  </div>
+  <div class="upload-user" style="margin-bottom:16px;">
+    <label style="font-size:13px;color:var(--mobile-dim);margin-right:8px;display:block;margin-bottom:6px;">GitHub Token（仅首次需要，用于提交数据同步）：</label>
+    <input type="password" id="ghTokenInput" placeholder="粘贴你的 GitHub Token（自动保存到本地）" style="width:100%;max-width:400px;">
+    <div style="font-size:11px;color:var(--mobile-dim);margin-top:4px;">Token 保存在浏览器本地，不会上传到服务器。从 https://github.com/settings/tokens 创建，需勾选 repo 权限。</div>
   </div>
 
-  <!-- Quick Stats -->
-  <div id="quickStats" style="display:flex;gap:10px;margin-bottom:16px;"></div>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+    <label style="font-size:14px;font-weight:600;color:var(--mobile-text);">编辑月份：</label>
+    <select id="uploadMonthSelect" onchange="onUploadMonthChange()" style="padding:10px 16px;border:2px solid #e5e7eb;border-radius:10px;font-size:14px;cursor:pointer;"></select>
+    <button class="btn-secondary" id="addMonthBtn" onclick="addNewMonth()" style="padding:10px 16px;">+ 新增月份</button>
+  </div>
 
-  <!-- ID Card Recognition (collapsible) -->
-  <details style="margin-bottom:12px;padding:0;border:1.5px solid #bae6fd;border-radius:12px;background:#f0f7ff;overflow:hidden;">
-    <summary style="padding:12px 16px;font-size:14px;font-weight:600;color:#0369a1;cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;">🪪 身份证智能识别 <span style="font-size:11px;color:#64748b;font-weight:400;">（点击展开）</span></summary>
-    <div style="padding:0 16px 14px;">
-      <textarea id="idCardInput" rows="4" placeholder="粘贴客户身份证信息，自动识别姓名和住址...&#10;姓名张三&#10;住址XX市XX区XX街道XX号&#10;公民身份号码420XXXXXXXXXXXXXXX" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;resize:vertical;font-family:inherit;line-height:1.5;"></textarea>
-      <div style="display:flex;gap:8px;margin-top:8px;">
-        <button class="btn-primary" style="padding:8px 20px;font-size:13px;" onclick="parseAndFillIdCard()">识别并填充 ↓</button>
-        <button class="btn-secondary" style="padding:8px 16px;font-size:13px;" onclick="document.getElementById('idCardInput').value=''">清空</button>
-      </div>
-    </div>
-  </details>
+  <div class="upload-table" id="uploadTable"></div>
 
-  <!-- Quick Add Form -->
-  <div style="margin-bottom:12px;padding:16px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;">
-    <div style="font-size:14px;font-weight:600;margin-bottom:12px;color:#1f2937;">➕ 添加客户</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-      <select id="addrDistrict" onchange="onAddrDistrictChange()" style="padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;">
+  <div class="address-upload">
+    <div class="address-upload-title">📋 客户地址详情录入</div>
+    <div style="font-size:12px;color:var(--mobile-dim);margin-bottom:12px;">录入客户地址详情，系统自动归类到对应区县和街道，并同步更新上方表格数据。</div>
+    <div class="address-input-row">
+      <select id="addrMonth" style="min-width:120px;" title="选择客户归属月份"></select>
+      <select id="addrDistrict" onchange="onAddrDistrictChange()" style="min-width:140px;">
         <option value="">选择区县</option>
       </select>
-      <select id="addrStreet" style="padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;">
+      <select id="addrStreet" style="min-width:140px;">
         <option value="">选择街道/乡镇</option>
       </select>
-    </div>
-    <input type="text" id="addrDetail" placeholder="详细地址（如：清江大道168号）" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;margin-bottom:10px;" onkeydown="if(event.key==='Enter')addAddressItem()">
-    <div style="display:flex;gap:10px;align-items:center;">
-      <input type="text" id="addrName" placeholder="客户姓名" style="flex:1;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" onkeydown="if(event.key==='Enter')addAddressItem()">
-      <select id="addrVip" style="padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;">
-        <option value="0">普通</option>
-        <option value="1">VIP</option>
+      <input type="text" id="addrDetail" placeholder="客户详细地址">
+      <input type="text" id="addrName" placeholder="客户姓名" style="max-width:120px;">
+      <select id="addrVip" style="min-width:100px;">
+        <option value="0">普通客户</option>
+        <option value="1">VIP客户</option>
       </select>
-      <button class="btn-primary" style="padding:10px 28px;font-size:14px;white-space:nowrap;" onclick="addAddressItem()">添加</button>
+      <button onclick="addAddressItem()">添加</button>
     </div>
+    <div class="address-list" id="addressList"></div>
   </div>
 
-  <!-- Excel Import (compact) -->
-  <div style="margin-bottom:12px;padding:12px 16px;background:#fffbeb;border:1.5px solid #fde68a;border-radius:12px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-      <div style="font-size:13px;font-weight:600;color:#92400e;">📊 Excel批量导入</div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn-secondary" style="padding:8px 16px;font-size:12px;" onclick="downloadExcelTemplate()">📥 模板</button>
-        <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleExcelUpload(event)">
-        <button class="btn-primary" style="padding:8px 16px;font-size:12px;" onclick="document.getElementById('excelFileInput').click()">📁 上传</button>
-      </div>
-    </div>
-    <div id="importStatus" style="font-size:12px;color:#6b7280;margin-top:8px;"></div>
-    <div id="importPreview" style="margin-top:8px;display:none;"></div>
+  <div class="upload-actions">
+    <button class="btn-primary" id="submitBtn">提交数据</button>
+    <button class="btn-secondary" id="resetBtn">恢复默认</button>
   </div>
-
-  <!-- Customer List -->
-  <div style="padding:16px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-      <div style="font-size:14px;font-weight:600;color:#1f2937;">📋 客户列表 <span id="customerCount" style="font-size:12px;color:#6b7280;font-weight:400;"></span></div>
-      <span style="font-size:11px;color:#9ca3af;">数据自动同步</span>
-    </div>
-    <input type="text" id="customerSearchInput" placeholder="🔍 搜索客户姓名..." style="width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;margin-bottom:10px;" oninput="renderCustomerList()">
-    <div id="addressList" style="max-height:500px;overflow-y:auto;"></div>
-  </div>
-
-  <div id="uploadLastUpdate" style="text-align:center;font-size:11px;color:#9ca3af;margin-top:12px;"></div>
+  <div class="upload-last-update" id="uploadLastUpdate"></div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
-
-<!-- Developer Info Footer -->
-<div id="devFooter" style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:4px 8px;font-size:11px;color:rgba(107,114,128,0.7);background:rgba(10,14,26,0.6);pointer-events:none;z-index:999;backdrop-filter:blur(4px);">
-  系统开发：宜都华晟达洲比亚迪 · 技术支持：Trae AI · 数据更新：实时同步
-</div>
-<script>
-// Adjust footer color based on view
-(function(){
-  var footer = document.getElementById('devFooter');
-  function updateFooterStyle(){
-    var hash = location.hash.replace('#','') || 'tv';
-    if(hash === 'tv'){
-      footer.style.color = 'rgba(107,114,128,0.6)';
-      footer.style.background = 'rgba(10,14,26,0.6)';
-    } else {
-      footer.style.color = 'rgba(107,114,128,0.6)';
-      footer.style.background = 'rgba(243,244,246,0.8)';
-    }
-  }
-  updateFooterStyle();
-  window.addEventListener('hashchange', updateFooterStyle);
-})();
-</script>
 </body>
 </html>
