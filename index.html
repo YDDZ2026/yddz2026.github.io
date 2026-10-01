@@ -185,6 +185,44 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans CJ
   .nav-logo { font-size: 13px; }
   .tv-title { font-size: 20px; }
 }
+
+/* Upload page redesign */
+.upload-toolbar { display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap; margin-bottom:20px; padding:16px; background:var(--mobile-card); border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+.toolbar-group { display:flex; flex-direction:column; gap:4px; }
+.toolbar-group label { font-size:11px; color:var(--mobile-dim); font-weight:600; text-transform:uppercase; }
+.toolbar-group select, .toolbar-group input { padding:8px 12px; border:1.5px solid #e5e7eb; border-radius:8px; font-size:13px; min-width:120px; }
+.toolbar-group input:focus, .toolbar-group select:focus { border-color:#3b82f6; outline:none; }
+.btn-sm { padding:8px 14px !important; font-size:13px !important; }
+
+.district-cards { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px; margin-bottom:20px; }
+.district-card { background:var(--mobile-card); border-radius:12px; padding:14px; box-shadow:0 1px 4px rgba(0,0,0,0.06); border:1.5px solid transparent; transition:border-color 0.2s, box-shadow 0.2s; }
+.district-card:hover { border-color:#3b82f6; box-shadow:0 2px 8px rgba(59,130,246,0.15); }
+.dc-name { font-size:14px; font-weight:700; color:var(--mobile-text); margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #f3f4f6; }
+.dc-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.dc-label { font-size:12px; color:var(--mobile-dim); min-width:36px; }
+.dc-stepper { display:flex; align-items:center; gap:2px; }
+.dc-stepper input { width:52px; text-align:center; border:1.5px solid #e5e7eb; border-radius:6px; padding:4px 2px; font-size:13px; font-weight:600; }
+.dc-stepper input:focus { border-color:#3b82f6; outline:none; }
+.dc-btn { width:28px; height:28px; border:none; background:#f3f4f6; border-radius:6px; font-size:16px; font-weight:700; color:#374151; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s; }
+.dc-btn:hover { background:#dbeafe; color:#1d4ed8; }
+.dc-btn:active { background:#bfdbfe; }
+.dc-summary { font-size:11px; color:var(--mobile-dim); margin-top:8px; padding-top:6px; border-top:1px dashed #e5e7eb; }
+
+.address-upload { background:var(--mobile-card); border-radius:12px; padding:16px; margin-bottom:16px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+.address-upload-title { font-size:15px; font-weight:700; color:var(--mobile-text); margin-bottom:12px; }
+.address-input-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.address-input-row select, .address-input-row input { padding:8px 10px; border:1.5px solid #e5e7eb; border-radius:8px; font-size:13px; }
+.address-input-row input[type="text"] { flex:1; min-width:100px; }
+.address-input-row select { min-width:90px; }
+.address-input-row select:focus, .address-input-row input:focus { border-color:#3b82f6; outline:none; }
+.address-list { margin-top:12px; max-height:200px; overflow-y:auto; }
+.address-item { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:#f9fafb; border-radius:8px; margin-bottom:6px; font-size:13px; }
+.address-item .del-btn { background:#fee2e2; color:#dc2626; border:none; border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer; }
+.address-item .del-btn:hover { background:#fecaca; }
+
+.upload-actions { display:flex; gap:12px; margin-top:16px; }
+.upload-last-update { font-size:12px; color:var(--mobile-dim); margin-top:12px; }
+
 </style>
 </head>
 <body>
@@ -329,57 +367,51 @@ setTimeout(function(){
   </div>
   <div id="uploadContent" style="display:none;">
     <div class="upload-header">
-      <div class="upload-title">数据上传 <span style="font-size:14px;color:var(--tv-success);">✓ 管理员</span></div>
-      <div class="upload-subtitle">按月编辑宜昌各区县客户数据，提交后实时同步到所有设备</div>
+      <div class="upload-title">数据管理 <span style="font-size:14px;color:var(--tv-success);">✓ 管理员</span></div>
+      <div class="upload-subtitle">编辑各区县客户数据，提交后实时同步到所有设备</div>
     </div>
-    <div class="upload-info">
-      💡 <b>按月统计</b>：选择月份后编辑该月各区县客户数据，支持2026年8月起逐月统计。<br>
-      📊 <b>累计查看</b>：在大屏选择"累计"可查看所有月份汇总数据。<br>
-      📋 <b>地址录入</b>：录入客户地址详情，系统自动归类到对应区县和街道。<br>
-      🔴 右上角状态：绿色"已同步"=云端在线，红色"离线模式"=仅本地存储。
-    </div>
-  <div class="upload-user">
-    <label style="font-size:13px;color:var(--mobile-dim);margin-right:8px;">您的姓名：</label>
-    <input type="text" id="userName" placeholder="请输入姓名">
-  </div>
-  <div class="upload-user" style="margin-bottom:16px;">
-    <label style="font-size:13px;color:var(--mobile-dim);margin-right:8px;display:block;margin-bottom:6px;">GitHub Token（仅首次需要，用于提交数据同步）：</label>
-    <input type="password" id="ghTokenInput" placeholder="粘贴你的 GitHub Token（自动保存到本地）" style="width:100%;max-width:400px;">
-    <div style="font-size:11px;color:var(--mobile-dim);margin-top:4px;">Token 保存在浏览器本地，不会上传到服务器。从 https://github.com/settings/tokens 创建，需勾选 repo 权限。</div>
-  </div>
 
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
-    <label style="font-size:14px;font-weight:600;color:var(--mobile-text);">编辑月份：</label>
-    <select id="uploadMonthSelect" onchange="onUploadMonthChange()" style="padding:10px 16px;border:2px solid #e5e7eb;border-radius:10px;font-size:14px;cursor:pointer;"></select>
-    <button class="btn-secondary" id="addMonthBtn" onclick="addNewMonth()" style="padding:10px 16px;">+ 新增月份</button>
+  <div class="upload-toolbar">
+    <div class="toolbar-group">
+      <label>月份</label>
+      <select id="uploadMonthSelect" onchange="onUploadMonthChange()"></select>
+      <button class="btn-secondary btn-sm" onclick="addNewMonth()">+ 新增</button>
+    </div>
+    <div class="toolbar-group">
+      <label>操作人</label>
+      <input type="text" id="userName" placeholder="姓名">
+    </div>
+    <div class="toolbar-group">
+      <label>Token</label>
+      <input type="password" id="ghTokenInput" placeholder="GitHub Token（首次需填写）">
+    </div>
   </div>
 
   <div class="upload-table" id="uploadTable"></div>
 
   <div class="address-upload">
-    <div class="address-upload-title">📋 客户地址详情录入</div>
-    <div style="font-size:12px;color:var(--mobile-dim);margin-bottom:12px;">录入客户地址详情，系统自动归类到对应区县和街道，并同步更新上方表格数据。</div>
+    <div class="address-upload-title">📋 添加客户地址</div>
     <div class="address-input-row">
-      <select id="addrMonth" style="min-width:120px;" title="选择客户归属月份"></select>
-      <select id="addrDistrict" onchange="onAddrDistrictChange()" style="min-width:140px;">
-        <option value="">选择区县</option>
+      <select id="addrMonth" title="归属月份"></select>
+      <select id="addrDistrict" onchange="onAddrDistrictChange()">
+        <option value="">区县</option>
       </select>
-      <select id="addrStreet" style="min-width:140px;">
-        <option value="">选择街道/乡镇</option>
+      <select id="addrStreet">
+        <option value="">街道/乡镇</option>
       </select>
-      <input type="text" id="addrDetail" placeholder="客户详细地址">
-      <input type="text" id="addrName" placeholder="客户姓名" style="max-width:120px;">
-      <select id="addrVip" style="min-width:100px;">
-        <option value="0">普通客户</option>
-        <option value="1">VIP客户</option>
+      <input type="text" id="addrDetail" placeholder="详细地址">
+      <input type="text" id="addrName" placeholder="姓名">
+      <select id="addrVip">
+        <option value="0">普通</option>
+        <option value="1">VIP</option>
       </select>
-      <button onclick="addAddressItem()">添加</button>
+      <button class="btn-primary btn-sm" onclick="addAddressItem()">添加</button>
     </div>
     <div class="address-list" id="addressList"></div>
   </div>
 
   <div class="upload-actions">
-    <button class="btn-primary" id="submitBtn">提交数据</button>
+    <button class="btn-primary" id="submitBtn">💾 提交并同步</button>
     <button class="btn-secondary" id="resetBtn">恢复默认</button>
   </div>
   <div class="upload-last-update" id="uploadLastUpdate"></div>
